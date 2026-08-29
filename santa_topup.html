@@ -1,35 +1,40 @@
 <!--
-DESIGN PLAN — SANTA TOPUP storefront (Gift Ledger)
+DESIGN PLAN — SANTA TOPUP storefront (Arcade Cartridge)
 Subject: Cambodian mobile-game diamond top-up shop, paid via KHQR (Bakong).
 Audience: young Khmer mobile gamers on phones, low patience, want 3 taps to pay.
 Page's job: pick game -> pick diamond package -> confirm player ID -> pay via KHQR -> see delivery.
 
-Concept: Santa's whole job is turning a payment into a delivered gift — so the UI
-reads as kraft gift-wrap and hand-written gift tags rather than a neon storefront.
-Warm paper, deep pine-green ink, a wax-seal stamp instead of a rubber stamp, a
-single-hole gift tag instead of a two-hole ticket stub. Same honest, flat,
-no-glow material language as the receipt-shop original, different real-world
-object: a gift, not a ticket.
+Concept: recast the storefront as a game HUD / cartridge-slot inventory rather than
+a shop. Every card reads like an item slot in an in-game store: chamfered
+(cut-corner) panels instead of rounded cards, thin glowing edges instead of
+paper shadows, connector "pins" instead of ticket-stub holes. The payment
+sheet becomes a loading/charging screen — a scanline sweeps the QR while the
+system "charges", and a successful payment flashes a pixel-style LEVEL UP
+badge instead of a wax seal.
 
 Color (named):
-  --paper / --paper-2: #FBF2E3 / #F3E4C8   (warm kraft/cream paper, two shades for stripes)
-  --card:  #FFFDF8                          (whiter card stock, sits above the paper)
-  --ink:   #1F3A2E                          (deep pine green — text)
-  --ink-soft: #6B7C6F                       (muted sage — secondary text)
-  --stamp: #A31621                          (cranberry wax-seal red — urgent/danger/badges)
-  --bakong:#1E5AA8                          (KHQR/Bakong blue — the one real brand tie, CTA only)
-  --paid:  #2F6B4F                          (forest green — success)
-  --line:  #E8D9BA                          (gift-wrap crease / dashed dividers)
+  --void / --void-2: #0A0E18 / #0D1226      (near-black indigo bg, two shades for stripes)
+  --panel: #121A2E                          (card surface, sits above the void)
+  --panel-2: #182036                        (raised/hover panel)
+  --ink:   #E9EEFC                          (cool white — text)
+  --ink-soft: #7C88AA                       (muted slate — secondary text)
+  --volt:  #00D1FF                          (electric cyan — CTA / brand / KHQR tie)
+  --surge: #FF3B6B                          (magenta-red — badges/danger/stamp equivalent)
+  --gold:  #FFC93C                          (rare-item amber — "popular" highlight)
+  --paid:  #33FF9C                          (neon green — success)
+  --line: rgba(0,209,255,.16)               (circuit-line divider)
+  --line-strong: rgba(0,209,255,.38)        (bright circuit edge)
 
-Type: Fraunces (display — warm high-contrast serif, gift-card lettering)
+Type: Rajdhani (display — condensed technical HUD lettering)
       Archivo (body — grotesk, plain and legible)
-      Space Mono (prices, IDs, trx refs — typewriter/receipt-printer feel)
+      Space Mono (prices, IDs, trx refs — terminal/readout feel)
       Kantumruy Pro (Khmer, paired throughout)
 
-Signature element: a scalloped ribbon edge (wave clip-path) on the hero banner and
-the payment sheet's top edge, as if unwrapping a ribbon-tied gift; game and product
-cards get a single die-cut gift-tag hole at a slight rotation instead of a two-hole
-ticket-stub seam, and successful payments get a rotated gold wax-seal badge.
+Signature element: chamfered "cartridge slot" panels (all four corners cut,
+not rounded) with a glowing 1px edge that intensifies on press/selection,
+replacing the ticket-stub die-cut holes with small glowing connector pins;
+the payment sheet's QR frame gets a scanline sweep while waiting, and a
+successful payment flashes a pixel LEVEL UP badge instead of a wax seal.
 -->
 <!DOCTYPE html>
 <html lang="km">
@@ -45,17 +50,18 @@ ticket-stub seam, and successful payments get a rotated gold wax-seal badge.
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="/icon-192.png">
-<meta name="theme-color" content="#A31621">
+<meta name="theme-color" content="#0A0E18">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Archivo:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&family=Kantumruy+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Archivo:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&family=Kantumruy+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <style>
 :root{
-  --paper:#FBF2E3; --paper-2:#F3E4C8; --card:#FFFDF8;
-  --ink:#1F3A2E; --ink-soft:#6B7C6F;
-  --stamp:#A31621; --bakong:#1E5AA8; --paid:#2F6B4F;
-  --line:#E8D9BA; --line-strong:#D4BD8E;
-  --text:var(--ink); --muted:var(--ink-soft); --gold:var(--stamp); --gem:var(--bakong); --success:var(--paid); --danger:#A31621;
+  --paper:#0A0E18; --paper-2:#0D1226; --card:#121A2E;
+  --ink:#E9EEFC; --ink-soft:#7C88AA;
+  --stamp:#FF3B6B; --bakong:#00D1FF; --paid:#33FF9C;
+  --line:rgba(0,209,255,.16); --line-strong:rgba(0,209,255,.38);
+  --panel-2:#182036; --gold:#FFC93C;
+  --text:var(--ink); --muted:var(--ink-soft); --gold-old:var(--stamp); --gem:var(--bakong); --success:var(--paid); --danger:var(--stamp);
   --notch:9px;
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
@@ -63,85 +69,90 @@ ticket-stub seam, and successful payments get a rotated gold wax-seal badge.
 .icon svg{width:1em; height:1em; display:block;}
 html,body{margin:0; padding:0; min-height:100%;
   background:
-    repeating-linear-gradient(180deg, transparent 0 63px, rgba(28,27,25,.035) 63px 64px),
-    radial-gradient(rgba(28,27,25,.03) 1px, transparent 1px) 0 0/14px 14px,
+    repeating-linear-gradient(180deg, transparent 0 3px, rgba(0,209,255,.025) 3px 4px),
+    radial-gradient(ellipse at 15% -10%, rgba(0,209,255,.10), transparent 45%),
+    radial-gradient(ellipse at 100% 10%, rgba(255,59,107,.08), transparent 40%),
     var(--paper);
   color:var(--text); font-family:'Archivo','Kantumruy Pro',sans-serif; overflow-x:hidden;}
 h1,h2,h3,.display,.topbar .sitename,footer .fname,.detail-header .gname,.game-card .info .gname,.product-card .pname,.btn-primary,.sheet h3{
-  font-family:'Fraunces','Kantumruy Pro',sans-serif; letter-spacing:.6px; font-weight:400;}
+  font-family:'Rajdhani','Kantumruy Pro',sans-serif; letter-spacing:.6px; font-weight:700; text-transform:uppercase;}
 .mono{font-family:'Space Mono','Kantumruy Pro',monospace;}
 a{color:inherit; text-decoration:none;}
 button{font-family:inherit; cursor:pointer; border:none; background:none;}
 ::-webkit-scrollbar{display:none;}
 
-/* signature: a die-cut ticket-stub corner (one small triangle bitten out) */
+/* signature: chamfered cartridge-slot corners (all four corners cut) */
 .facet{
-  clip-path: polygon(14px 0, 100% 0, 100% 100%, 0 100%, 0 14px);
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
   position:relative;
 }
 .facet::after{
-  content:""; position:absolute; top:0; left:0; width:14px; height:14px;
-  background:
-    radial-gradient(circle at 0 0, transparent 14px, var(--paper) 14.5px);
-  pointer-events:none;
+  content:""; position:absolute; inset:0; pointer-events:none;
+  border:1px solid var(--line-strong);
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
 }
 
 /* ---------- top bar ---------- */
 .topbar{
   position:sticky; top:0; z-index:50;
   display:flex; align-items:center; gap:10px;
-  padding:13px 16px; background:var(--paper);
-  border-bottom:2px dashed var(--line-strong);
+  padding:13px 16px; background:rgba(10,14,24,.92); backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--line-strong);
+  box-shadow:0 1px 14px rgba(0,209,255,.12);
 }
-.topbar img.logo{height:32px; width:32px; border-radius:6px; object-fit:cover; border:1.5px solid var(--ink); box-shadow:1.5px 1.5px 0 var(--line-strong);}
-.topbar .sitename{font-size:22px; letter-spacing:1.2px; position:relative;}
+.topbar img.logo{height:32px; width:32px; border-radius:4px; object-fit:cover; border:1.5px solid var(--bakong); box-shadow:0 0 10px rgba(0,209,255,.5);}
+.topbar .sitename{font-size:22px; letter-spacing:1.6px; position:relative; color:var(--ink); text-shadow:0 0 14px rgba(0,209,255,.45);}
 .topbar .sitename::after{
-  content:"KHQR"; position:absolute; top:-6px; right:-30px; font-family:'Space Mono',monospace;
+  content:"KHQR"; position:absolute; top:-6px; right:-32px; font-family:'Space Mono',monospace;
   font-size:7.5px; font-weight:700; color:var(--bakong); border:1px solid var(--bakong);
-  border-radius:2px; padding:1px 3px; transform:rotate(-8deg); letter-spacing:.5px;
+  border-radius:2px; padding:1px 3px; transform:rotate(0); letter-spacing:.5px;
+  box-shadow:0 0 8px rgba(0,209,255,.5);
 }
 .topbar .spacer{flex:1;}
 .topbar .contact-btn{
   display:flex; align-items:center; gap:6px; padding:8px 12px;
   background:var(--card); color:var(--ink); font-size:12.5px; font-weight:700;
-  border:1.5px solid var(--ink); border-radius:3px;
-  box-shadow:2px 2px 0 var(--ink);
+  border:1px solid var(--line-strong); border-radius:3px;
+  box-shadow:0 0 0 rgba(0,209,255,0); transition:box-shadow .2s ease, border-color .2s ease;
 }
+.topbar .contact-btn:active{border-color:var(--bakong); box-shadow:0 0 10px rgba(0,209,255,.45);}
 
-/* ---------- hero banner: torn receipt edge ---------- */
+/* ---------- hero banner: HUD scan panel with angled edge ---------- */
 .hero{position:relative; width:100%; aspect-ratio:16/8.4; overflow:hidden; background:var(--card);
-  clip-path: polygon(
-    0 0, 100% 0, 100% 94%,
-    95% 100%, 90% 94%, 85% 100%, 80% 94%, 75% 100%, 70% 94%, 65% 100%, 60% 94%, 55% 100%,
-    50% 94%, 45% 100%, 40% 94%, 35% 100%, 30% 94%, 25% 100%, 20% 94%, 15% 100%, 10% 94%, 5% 100%, 0 94%
-  );
+  clip-path: polygon(0 0, 100% 0, 100% 92%, 96% 100%, 0 100%);
+  border-bottom:1px solid var(--line-strong);
+}
+.hero::after{
+  content:""; position:absolute; inset:0; pointer-events:none; z-index:2;
+  background:repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 3px, rgba(0,209,255,.05) 3px 4px);
+  mix-blend-mode:screen;
 }
 .hero-track{display:flex; height:100%; transition:transform .5s ease;}
 .hero-slide{flex:0 0 100%; height:100%;}
-.hero-slide img{width:100%; height:100%; object-fit:cover; display:block;}
-.hero-dots{position:absolute; bottom:16px; left:0; right:0; display:flex; justify-content:center; gap:6px;}
-.hero-dots span{width:5px; height:5px; border-radius:50%; background:rgba(28,27,25,.28); transition:width .3s ease, border-radius .3s ease, background .3s ease;}
-.hero-dots span.active{background:var(--stamp); width:15px; border-radius:3px;}
+.hero-slide img{width:100%; height:100%; object-fit:cover; display:block; filter:saturate(1.08) contrast(1.05);}
+.hero-dots{position:absolute; bottom:16px; left:0; right:0; display:flex; justify-content:center; gap:6px; z-index:3;}
+.hero-dots span{width:5px; height:5px; border-radius:50%; background:rgba(233,238,252,.28); transition:width .3s ease, border-radius .3s ease, background .3s ease;}
+.hero-dots span.active{background:var(--bakong); width:15px; border-radius:3px; box-shadow:0 0 8px rgba(0,209,255,.7);}
 .hero-empty{display:flex; align-items:center; justify-content:center; gap:6px; height:100%; color:var(--muted); font-size:13px; background:
   repeating-linear-gradient(135deg, var(--paper-2) 0 10px, var(--paper) 10px 20px);}
 
 /* ---------- small promo ---------- */
 .promo-strip{display:flex; gap:10px; padding:14px 16px 4px; overflow-x:auto;}
-.promo-strip img{height:62px; border-radius:2px; flex:0 0 auto; border:1.5px solid var(--ink); box-shadow:2px 2px 0 var(--line-strong); transition:transform .15s ease, box-shadow .15s ease;}
-.promo-strip img:active{transform:translate(2px,2px) rotate(-1deg); box-shadow:0 0 0 var(--line-strong);}
+.promo-strip img{height:62px; border-radius:2px; flex:0 0 auto; border:1px solid var(--line-strong); box-shadow:0 0 8px rgba(0,209,255,.2); transition:transform .15s ease, box-shadow .15s ease;}
+.promo-strip img:active{transform:translateY(1px); box-shadow:0 0 14px rgba(0,209,255,.5);}
 
 /* ---------- section ---------- */
 .section{padding:20px 16px 10px;}
-.section h2{font-size:19px; color:var(--ink); font-weight:400; letter-spacing:1px; margin:0 0 12px;
+.section h2{font-size:19px; color:var(--ink); font-weight:700; letter-spacing:1.4px; margin:0 0 12px;
   display:flex; align-items:center; gap:10px;}
-.section h2::before{content:""; width:8px; height:8px; border-radius:50%; background:var(--stamp); flex-shrink:0;}
-.section h2::after{content:""; flex:1; height:0; border-top:2px dashed var(--line-strong); transform:translateY(-2px);}
+.section h2::before{content:""; width:8px; height:8px; background:var(--bakong); flex-shrink:0; box-shadow:0 0 8px rgba(0,209,255,.8); clip-path:polygon(0 20%,20% 0,80% 0,100% 20%,100% 80%,80% 100%,20% 100%,0 80%);}
+.section h2::after{content:""; flex:1; height:1px; background:linear-gradient(90deg, var(--line-strong), transparent); transform:translateY(0);}
 
-/* ---------- game grid: ticket cards ---------- */
+/* ---------- game grid: cartridge-slot cards ---------- */
 .game-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:0 16px 22px;}
 .game-card, .product-card, .id-form, .sheet{
-  background:var(--card); border:1.5px solid var(--ink);
-  box-shadow:3px 3px 0 var(--line-strong);
+  background:var(--card); border:1px solid var(--line-strong);
+  box-shadow:0 0 0 rgba(0,209,255,0), inset 0 0 0 rgba(0,209,255,0);
 }
 @keyframes cardIn{from{opacity:0; transform:translateY(12px) scale(.97);} to{opacity:1; transform:translateY(0) scale(1);}}
 .game-card{
@@ -152,32 +163,35 @@ button{font-family:inherit; cursor:pointer; border:none; background:none;}
 .game-card:nth-child(1){animation-delay:.03s;} .game-card:nth-child(2){animation-delay:.08s;}
 .game-card:nth-child(3){animation-delay:.13s;} .game-card:nth-child(4){animation-delay:.18s;}
 .game-card:nth-child(n+5){animation-delay:.22s;}
-.game-card .media{position:relative; aspect-ratio:1/.8; overflow:hidden; background:var(--paper-2);}
-.game-card .media img{width:100%; height:100%; object-fit:cover; display:block; transition:transform .35s ease;}
+.game-card .media{position:relative; aspect-ratio:1/.8; overflow:hidden; background:var(--panel-2);}
+.game-card .media img{width:100%; height:100%; object-fit:cover; display:block; transition:transform .35s ease; filter:saturate(1.1);}
 .game-card:active .media img{transform:scale(1.08);}
-.game-card .gem-badge{position:absolute; top:-8px; right:8px; z-index:2; width:26px; height:26px; border-radius:50%;
-  background:var(--stamp); display:flex; align-items:center; justify-content:center;
-  color:#fff; border:2px solid var(--ink); transform:rotate(-8deg);}
+.game-card .gem-badge{position:absolute; top:-8px; right:8px; z-index:2; width:26px; height:26px;
+  background:var(--surge, var(--stamp)); display:flex; align-items:center; justify-content:center;
+  color:#0A0E18; border:1.5px solid var(--stamp); transform:rotate(0);
+  clip-path:polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%);
+  box-shadow:0 0 10px rgba(255,59,107,.6);}
 .game-card .gem-badge svg{width:12px; height:12px;}
-/* die-cut notches at the ticket-stub seam */
+/* connector pins at the card seam, replacing the ticket-stub die-cut holes */
 .game-card .info{position:relative; z-index:2; padding:12px 10px 10px; background:var(--card);
-  border-top:2px dashed var(--line-strong); display:flex; flex-direction:column; gap:3px;}
+  border-top:1px solid var(--line-strong); display:flex; flex-direction:column; gap:3px;}
 .game-card .info::before, .game-card .info::after{
-  content:""; position:absolute; top:-9px; width:16px; height:16px; border-radius:50%;
-  background:var(--paper); border:1.5px solid var(--ink); z-index:3;
+  content:""; position:absolute; top:-4px; width:8px; height:8px;
+  background:var(--bakong); z-index:3; box-shadow:0 0 8px rgba(0,209,255,.8);
 }
-.game-card .info::before{left:-9px;}
-.game-card .info::after{right:-9px;}
-.game-card .info .gname{font-size:17px; letter-spacing:.5px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-.game-card .info .cta{display:flex; align-items:center; gap:3px; font-size:11px; font-weight:700; color:var(--bakong); text-transform:uppercase; letter-spacing:.4px;}
+.game-card .info::before{left:14px;}
+.game-card .info::after{right:14px;}
+.game-card .info .gname{font-size:17px; letter-spacing:.6px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.game-card .info .cta{display:flex; align-items:center; gap:3px; font-size:11px; font-weight:700; color:var(--bakong); text-transform:uppercase; letter-spacing:.6px;}
 .game-card .info .cta svg{width:10px; height:10px;}
 
 /* ---------- product grid (game detail) ---------- */
 @keyframes slideInLeft{from{opacity:0; transform:translateX(-14px);} to{opacity:1; transform:translateX(0);}}
 .detail-header{display:flex; align-items:center; gap:12px; padding:16px 16px 12px; animation:slideInLeft .3s cubic-bezier(.2,.8,.2,1) both;}
-.back-btn{width:36px; height:36px; border-radius:4px; background:var(--card); border:1.5px solid var(--ink);
-  display:flex; align-items:center; justify-content:center; font-size:18px; box-shadow:2px 2px 0 var(--line-strong);}
-.detail-header .gname{font-size:22px; letter-spacing:.8px;}
+.back-btn{width:36px; height:36px; background:var(--card); border:1px solid var(--line-strong);
+  display:flex; align-items:center; justify-content:center; font-size:18px; color:var(--bakong);
+  clip-path:polygon(8px 0,100% 0,100% 100%,0 100%,0 8px);}
+.detail-header .gname{font-size:22px; letter-spacing:1px; color:var(--ink);}
 
 .id-form{margin:0 16px 16px; padding:16px 14px; position:relative; animation:cardIn .35s cubic-bezier(.2,.8,.2,1) .05s both;}
 .id-form label{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; display:block; margin-bottom:7px; font-weight:700;}
@@ -186,19 +200,20 @@ button{font-family:inherit; cursor:pointer; border:none; background:none;}
 .id-field.zone-field{flex:0 0 100px;}
 .id-field .field-icon{position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none; z-index:1;}
 .id-field .field-icon svg{width:16px; height:16px;}
-.id-row input{width:100%; background:var(--paper); border:1.5px solid var(--ink); color:var(--ink);
-  padding:11px 12px 11px 34px; border-radius:3px; font-size:14px; font-family:'Space Mono','Kantumruy Pro',monospace; transition:border-color .15s ease;}
-.id-row input:focus{outline:2px solid var(--bakong); outline-offset:1px;}
+.id-row input{width:100%; background:var(--panel-2); border:1px solid var(--line-strong); color:var(--ink);
+  padding:11px 12px 11px 34px; border-radius:3px; font-size:14px; font-family:'Space Mono','Kantumruy Pro',monospace; transition:border-color .15s ease, box-shadow .15s ease;}
+.id-row input::placeholder{color:var(--muted);}
+.id-row input:focus{outline:none; border-color:var(--bakong); box-shadow:0 0 10px rgba(0,209,255,.4);}
 @keyframes statusIn{from{opacity:0; transform:translateY(-3px);} to{opacity:1; transform:translateY(0);}}
 .id-status{font-size:13px; min-height:18px; padding-top:2px; display:flex; align-items:center; gap:5px; font-weight:600; animation:statusIn .2s ease both;}
-.id-status.ok{color:var(--paid);}
+.id-status.ok{color:var(--paid); text-shadow:0 0 8px rgba(51,255,156,.5);}
 .id-status.err{color:var(--stamp);}
 .id-status.checking{color:var(--muted);}
 .empty-products{grid-column:1/-1; text-align:center; padding:34px 16px; color:var(--muted); font-size:13.5px; display:flex; flex-direction:column; align-items:center; gap:8px;
-  border:1.5px dashed var(--line-strong); border-radius:4px; background:var(--card);}
+  border:1px dashed var(--line-strong); border-radius:4px; background:var(--card);}
 .recent-ids{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
-.id-chip{display:flex; align-items:center; gap:5px; padding:6px 11px; border-radius:20px; background:var(--paper);
-  border:1.5px solid var(--ink); color:var(--ink); font-size:12px; font-weight:700;}
+.id-chip{display:flex; align-items:center; gap:5px; padding:6px 11px; border-radius:20px; background:var(--panel-2);
+  border:1px solid var(--line-strong); color:var(--ink); font-size:12px; font-weight:700;}
 .id-chip svg{width:12px; height:12px;}
 
 .product-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px 12px; padding:0 16px 18px;}
@@ -207,93 +222,94 @@ button{font-family:inherit; cursor:pointer; border:none; background:none;}
   padding:14px 12px 16px; text-align:center; position:relative; overflow:visible;
   animation:cardIn .35s cubic-bezier(.2,.8,.2,1) both;
   display:flex; flex-direction:column; align-items:center;
+  transition:border-color .15s ease, box-shadow .15s ease;
 }
 .product-card:nth-child(1){animation-delay:.02s;} .product-card:nth-child(2){animation-delay:.06s;}
 .product-card:nth-child(3){animation-delay:.1s;} .product-card:nth-child(4){animation-delay:.14s;}
 .product-card:nth-child(n+5){animation-delay:.16s;}
-.product-card.selected{border-color:var(--bakong); box-shadow:3px 3px 0 var(--bakong);}
+.product-card.selected{border-color:var(--bakong); box-shadow:0 0 16px rgba(0,209,255,.5), inset 0 0 12px rgba(0,209,255,.12);}
 .product-card.selected::after{
   animation:stampPop .35s cubic-bezier(.3,1.6,.5,1) both;
   content:"✓"; position:absolute; top:-9px; right:-9px; width:22px; height:22px; border-radius:50%;
-  background:var(--bakong); color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center;
-  justify-content:center; border:1.5px solid var(--ink); box-shadow:1.5px 1.5px 0 var(--ink);
+  background:var(--bakong); color:#0A0E18; font-size:12px; font-weight:700; display:flex; align-items:center;
+  justify-content:center; border:1.5px solid var(--paper); box-shadow:0 0 10px rgba(0,209,255,.7);
 }
-/* popular badge: a small folded ribbon flag instead of a plain pill */
-.product-card .badge{position:absolute; top:-6px; left:12px; font-size:9.5px; background:var(--stamp); color:#fff;
-  padding:4px 8px 6px 7px; font-weight:700; display:flex; align-items:center; gap:3px; border:1.5px solid var(--ink);
-  border-radius:2px 2px 2px 0; transform:rotate(-3deg); z-index:2;
+/* popular badge: a rare-item ribbon flag */
+.product-card .badge{position:absolute; top:-6px; left:12px; font-size:9.5px; background:var(--gold); color:#1A1300;
+  padding:4px 8px 6px 7px; font-weight:700; display:flex; align-items:center; gap:3px; border:1px solid var(--gold);
+  border-radius:2px 2px 2px 0; transform:rotate(0); z-index:2; box-shadow:0 0 10px rgba(255,201,60,.6);
   clip-path:polygon(0 0, 100% 0, 100% 100%, 50% 82%, 0 100%);}
 .product-card .badge svg{width:9px; height:9px;}
-.product-card .pmedia{width:52px; height:52px; margin:0 auto 8px; border-radius:50%; overflow:hidden;
-  background:var(--paper-2); border:1.5px dashed var(--line-strong);
+.product-card .pmedia{width:52px; height:52px; margin:0 auto 8px; overflow:hidden;
+  background:var(--panel-2); border:1px solid var(--line-strong);
+  clip-path:polygon(20% 0,80% 0,100% 20%,100% 80%,80% 100%,20% 100%,0 80%,0 20%);
   display:flex; align-items:center; justify-content:center; flex-shrink:0;}
 .product-card .pmedia img{width:100%; height:100%; object-fit:cover; display:block;}
-.product-card .pmedia .fallback{color:var(--stamp); opacity:.85;}
+.product-card .pmedia .fallback{color:var(--bakong); opacity:.9;}
 .product-card .pmedia .fallback svg{width:20px; height:20px;}
-.product-card .pname{font-size:13px; font-weight:600; line-height:1.25; flex:1;
+.product-card .pname{font-size:13px; font-weight:600; line-height:1.25; flex:1; color:var(--ink);
   min-height:2.5em; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
-/* price gift-tag: a small rotated tag with a single die-cut string-hole,
-   like a real gift tag hanging off the package — the theme's signature swap
-   from the original two-hole ticket-stub seam. */
+/* price readout: a terminal-style chip, the theme's signature swap
+   from the original gift-tag / ticket-stub seam. */
 .product-card .pstub{align-self:center; margin-top:10px; display:inline-flex; align-items:center; gap:6px;
-  padding:6px 12px 6px 8px; background:var(--paper-2); border:1.5px solid var(--ink); border-radius:2px 6px 6px 2px;
-  transform:rotate(-3deg); box-shadow:2px 2px 0 var(--line-strong); position:relative;}
-.product-card .pstub::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--paper);
-  border:1.5px solid var(--ink); flex-shrink:0;}
-.product-card .pprice{font-family:'Space Mono','Kantumruy Pro',monospace; color:var(--stamp); font-weight:700; font-size:15px;}
+  padding:6px 12px 6px 8px; background:var(--panel-2); border:1px solid var(--line-strong); border-radius:2px;
+  transform:rotate(0); box-shadow:0 0 8px rgba(0,209,255,.18); position:relative;}
+.product-card .pstub::before{content:""; width:6px; height:6px; border-radius:50%; background:var(--paid);
+  box-shadow:0 0 6px rgba(51,255,156,.8); flex-shrink:0;}
+.product-card .pprice{font-family:'Space Mono','Kantumruy Pro',monospace; color:var(--ink); font-weight:700; font-size:15px;}
 
 @keyframes barUp{from{opacity:0; transform:translateY(100%);} to{opacity:1; transform:translateY(0);}}
 .buy-bar{position:sticky; bottom:0; z-index:40; padding:14px 16px calc(14px + env(safe-area-inset-bottom));
-  background:var(--card); border-top:2px dashed var(--line-strong);
-  box-shadow:0 -3px 0 var(--paper), 0 -4px 0 var(--line);
+  background:rgba(10,14,24,.94); backdrop-filter:blur(6px); border-top:1px solid var(--line-strong);
+  box-shadow:0 -1px 14px rgba(0,209,255,.14);
   display:flex; align-items:center; gap:12px; animation:barUp .3s cubic-bezier(.2,.8,.2,1) both;}
 .buy-bar .total{flex:1;}
 .buy-bar .total .l{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; font-weight:700;}
-.buy-bar .total .v{font-family:'Space Mono','Kantumruy Pro',monospace; font-size:19px; font-weight:700; color:var(--stamp);}
+.buy-bar .total .v{font-family:'Space Mono','Kantumruy Pro',monospace; font-size:19px; font-weight:700; color:var(--ink);}
 .btn-primary{
-  background:var(--bakong); color:#fff; font-size:17px; letter-spacing:1px; padding:14px 26px;
-  border-radius:3px; border:1.5px solid var(--ink); box-shadow:3px 3px 0 var(--ink);
+  background:var(--bakong); color:#06121A; font-size:17px; letter-spacing:1.2px; padding:14px 26px;
+  border-radius:3px; border:1px solid var(--bakong); box-shadow:0 0 18px rgba(0,209,255,.55);
 }
-.btn-primary:disabled{background:var(--paper-2); color:var(--muted); box-shadow:3px 3px 0 var(--line);}
+.btn-primary:disabled{background:var(--panel-2); color:var(--muted); border-color:var(--line-strong); box-shadow:none;}
 
-/* ---------- payment sheet: torn receipt slip ---------- */
+/* ---------- payment sheet: charging / loading screen ---------- */
 @keyframes backdropIn{from{opacity:0;} to{opacity:1;}}
 @keyframes sheetUp{from{opacity:0; transform:translateY(26px);} to{opacity:1; transform:translateY(0);}}
-.sheet-backdrop{position:fixed; inset:0; background:rgba(28,27,25,.55); z-index:90; display:flex; align-items:flex-end;
+.sheet-backdrop{position:fixed; inset:0; background:rgba(4,6,12,.72); z-index:90; display:flex; align-items:flex-end;
   animation:backdropIn .2s ease both;}
 .sheet{width:100%; background:var(--card); padding:26px 20px calc(20px + env(safe-area-inset-bottom));
   animation:sheetUp .32s cubic-bezier(.2,.8,.2,1) both;
-  clip-path: polygon(
-    0 10px, 3% 3px, 6% 10px, 9% 3px, 12% 10px, 15% 3px, 18% 10px, 21% 3px, 24% 10px, 27% 3px,
-    30% 10px, 33% 3px, 36% 10px, 39% 3px, 42% 10px, 45% 3px, 48% 10px, 51% 3px, 54% 10px, 57% 3px,
-    60% 10px, 63% 3px, 66% 10px, 69% 3px, 72% 10px, 75% 3px, 78% 10px, 81% 3px, 84% 10px, 87% 3px,
-    90% 10px, 93% 3px, 96% 10px, 99% 3px, 100% 10px,
-    100% 100%, 0 100%
-  );
-  max-height:88vh; overflow-y:auto; border:none;
+  clip-path: polygon(0 14px, 14px 0, 100% 0, 100% 100%, 0 100%);
+  max-height:88vh; overflow-y:auto; border:none; border-top:1px solid var(--line-strong);
+  box-shadow:0 -2px 30px rgba(0,209,255,.15);
 }
-.sheet h3{margin:10px 0 4px; font-size:24px; letter-spacing:.6px;}
+.sheet h3{margin:10px 0 4px; font-size:24px; letter-spacing:1px; color:var(--ink);}
 .sheet .sub{color:var(--muted); font-size:12px; margin-bottom:16px; text-transform:uppercase; letter-spacing:1px; font-weight:700;}
-@keyframes qrPulse{0%,100%{box-shadow:3px 3px 0 var(--line-strong);} 50%{box-shadow:3px 3px 0 var(--bakong);}}
-.qr-frame{background:#fff; padding:16px; margin:0 auto 14px; width:min(230px,68vw);
-  border:1.5px solid var(--ink); box-shadow:3px 3px 0 var(--line-strong);
+@keyframes qrScan{0%{transform:translateY(-100%);} 100%{transform:translateY(100%);}}
+@keyframes qrPulse{0%,100%{box-shadow:0 0 10px rgba(0,209,255,.25);} 50%{box-shadow:0 0 22px rgba(0,209,255,.6);}}
+.qr-frame{background:#fff; padding:16px; margin:0 auto 14px; width:min(230px,68vw); position:relative; overflow:hidden;
+  border:1px solid var(--line-strong);
   animation:qrPulse 2.2s ease-in-out infinite;}
-.qr-frame canvas, .qr-frame img{width:100%; height:auto; display:block;}
+.qr-frame::after{content:""; position:absolute; left:0; right:0; height:26%; top:-30%;
+  background:linear-gradient(180deg, transparent, rgba(0,209,255,.35), transparent);
+  animation:qrScan 2.6s linear infinite;}
+.qr-frame canvas, .qr-frame img{width:100%; height:auto; display:block; position:relative; z-index:1;}
 .pay-url-btn{display:block; text-align:center; margin:0 auto 14px; color:var(--bakong); font-size:13px; font-weight:700; text-decoration:underline;}
-.pay-amount{text-align:center; font-family:'Space Mono','Kantumruy Pro',monospace; font-size:26px; color:var(--stamp); font-weight:700; margin-bottom:4px;}
+.pay-amount{text-align:center; font-family:'Space Mono','Kantumruy Pro',monospace; font-size:26px; color:var(--ink); font-weight:700; margin-bottom:4px; text-shadow:0 0 12px rgba(0,209,255,.35);}
 .pay-timer{text-align:center; color:var(--muted); font-size:13px; margin-bottom:16px; font-family:'Space Mono',monospace;}
-@keyframes stampSlam{0%{opacity:0; transform:scale(2) rotate(-1.2deg);} 70%{opacity:1; transform:scale(.92) rotate(-1.2deg);} 100%{opacity:1; transform:scale(1) rotate(-1.2deg);}}
+@keyframes stampSlam{0%{opacity:0; transform:scale(1.6);} 70%{opacity:1; transform:scale(.94);} 100%{opacity:1; transform:scale(1);}}
+@keyframes glowFlicker{0%,100%{opacity:1;} 45%{opacity:.55;} 55%{opacity:1;}}
 .pay-status{text-align:center; padding:13px; border-radius:3px; font-size:14px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:6px;
-  border:1.5px dashed var(--line-strong);}
-.pay-status.waiting{background:var(--paper); color:var(--muted);}
-.pay-status.success{background:#fff; color:var(--paid); border:3px solid var(--paid); transform:rotate(-1.2deg); animation:stampSlam .4s cubic-bezier(.2,.8,.2,1) both;
-  text-transform:uppercase; letter-spacing:1px;}
-.pay-status.processing{background:rgba(30,90,168,.08); color:var(--bakong); border-style:solid; border-color:var(--bakong);}
-.pay-status.failed{background:#fff; color:var(--stamp); border:3px solid var(--stamp); transform:rotate(-1.2deg); animation:stampSlam .4s cubic-bezier(.2,.8,.2,1) both;
-  text-transform:uppercase; letter-spacing:1px;}
+  border:1px dashed var(--line-strong);}
+.pay-status.waiting{background:var(--panel-2); color:var(--muted);}
+.pay-status.success{background:rgba(51,255,156,.08); color:var(--paid); border:1.5px solid var(--paid); animation:stampSlam .4s cubic-bezier(.2,.8,.2,1) both, glowFlicker 1.6s ease .4s 2;
+  text-transform:uppercase; letter-spacing:1.4px; box-shadow:0 0 20px rgba(51,255,156,.35);}
+.pay-status.processing{background:rgba(0,209,255,.08); color:var(--bakong); border-style:solid; border-color:var(--bakong);}
+.pay-status.failed{background:rgba(255,59,107,.08); color:var(--stamp); border:1.5px solid var(--stamp); animation:stampSlam .4s cubic-bezier(.2,.8,.2,1) both;
+  text-transform:uppercase; letter-spacing:1.4px;}
 
 @keyframes fadeUp{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);}}
-.receipt{margin-top:16px; background:var(--paper); border:1.5px dashed var(--line-strong); border-radius:3px; padding:14px 16px;
+.receipt{margin-top:16px; background:var(--panel-2); border:1px dashed var(--line-strong); border-radius:3px; padding:14px 16px;
   animation:fadeUp .3s ease both;}
 .receipt-row{display:flex; justify-content:space-between; gap:12px; padding:6px 0; font-size:13px; border-bottom:1px dotted var(--line-strong);
   animation:fadeUp .3s ease both;}
@@ -302,56 +318,58 @@ button{font-family:inherit; cursor:pointer; border:none; background:none;}
 .receipt-row:nth-child(n+5){animation-delay:.18s;}
 .receipt-row:last-child{border-bottom:none;}
 .receipt-row .l{color:var(--muted);}
-.receipt-row .v{font-family:'Space Mono',monospace; font-weight:700; text-align:right;}
-.receipt-total{display:flex; justify-content:space-between; margin-top:8px; padding-top:10px; border-top:2px dashed var(--line-strong); font-weight:700;}
-.receipt-total .v{font-family:'Space Mono',monospace; color:var(--stamp); font-size:16px;}
+.receipt-row .v{font-family:'Space Mono',monospace; font-weight:700; text-align:right; color:var(--ink);}
+.receipt-total{display:flex; justify-content:space-between; margin-top:8px; padding-top:10px; border-top:1px solid var(--line-strong); font-weight:700;}
+.receipt-total .v{font-family:'Space Mono',monospace; color:var(--bakong); font-size:16px; text-shadow:0 0 8px rgba(0,209,255,.4);}
 @keyframes copyBounce{0%{transform:scale(1);} 40%{transform:scale(1.04);} 100%{transform:scale(1);}}
-.copy-receipt-btn{width:100%; margin-top:12px; padding:11px; border-radius:3px; background:var(--bakong); color:#fff; font-weight:700; font-size:13px;
-  display:flex; align-items:center; justify-content:center; gap:6px; border:1.5px solid var(--ink); box-shadow:2px 2px 0 var(--ink);
+.copy-receipt-btn{width:100%; margin-top:12px; padding:11px; border-radius:3px; background:var(--bakong); color:#06121A; font-weight:700; font-size:13px;
+  display:flex; align-items:center; justify-content:center; gap:6px; border:1px solid var(--bakong); box-shadow:0 0 12px rgba(0,209,255,.4);
   transition:background .2s ease;}
-.copy-receipt-btn.copied{background:var(--paid); animation:copyBounce .3s ease;}
+.copy-receipt-btn.copied{background:var(--paid); border-color:var(--paid); box-shadow:0 0 12px rgba(51,255,156,.5); animation:copyBounce .3s ease;}
 .giftcard-note{font-size:13px; color:var(--muted); line-height:1.5; padding:4px 0; display:flex; align-items:center; gap:8px;}
-.giftcard-code-box{margin-top:10px; padding:14px; border-radius:3px; background:#fff; border:1.5px dashed var(--stamp); text-align:center; animation:fadeUp .3s ease .1s both;}
+.giftcard-code-box{margin-top:10px; padding:14px; border-radius:3px; background:var(--panel-2); border:1px dashed var(--stamp); text-align:center; animation:fadeUp .3s ease .1s both;}
 .giftcard-code-box .l{font-size:11.5px; color:var(--muted); margin-bottom:6px; display:flex; align-items:center; justify-content:center; gap:5px; text-transform:uppercase; letter-spacing:.5px; font-weight:700;}
 .giftcard-code-box .code-value{font-family:'Space Mono',monospace; font-size:15px; font-weight:700; color:var(--ink); letter-spacing:.5px; word-break:break-all;}
-.sheet .close-btn{width:100%; margin-top:16px; padding:12px; background:var(--paper); color:var(--muted); border-radius:3px; font-weight:700;
-  border:1.5px solid var(--line-strong);}
+.sheet .close-btn{width:100%; margin-top:16px; padding:12px; background:var(--panel-2); color:var(--muted); border-radius:3px; font-weight:700;
+  border:1px solid var(--line-strong);}
 
 /* ---------- footer ---------- */
-footer{padding:30px 16px 40px; text-align:center; color:var(--muted); font-size:12px; border-top:2px dashed var(--line-strong); margin-top:12px;}
-footer .fname{color:var(--ink); font-size:20px; letter-spacing:.8px; margin-bottom:6px;}
+footer{padding:30px 16px 40px; text-align:center; color:var(--muted); font-size:12px; border-top:1px solid var(--line-strong); margin-top:12px;}
+footer .fname{color:var(--ink); font-size:20px; letter-spacing:1.2px; margin-bottom:6px; text-shadow:0 0 10px rgba(0,209,255,.3);}
 footer .links{display:flex; justify-content:center; gap:16px; margin:10px 0;}
 footer .links a{color:var(--ink); text-decoration:underline; font-weight:600; font-size:11.5px;}
 footer .trust-badge{display:inline-flex; align-items:center; gap:6px; margin:10px auto 4px; padding:6px 14px;
-  border:1.5px dashed var(--line-strong); border-radius:20px; font-size:11px; font-weight:700; color:var(--paid);}
+  border:1px solid var(--line-strong); border-radius:20px; font-size:11px; font-weight:700; color:var(--paid);}
 footer .trust-badge svg{width:13px; height:13px; flex-shrink:0;}
 footer .accept-label{font-size:10px; text-transform:uppercase; letter-spacing:1.2px; color:var(--muted); font-weight:700; margin:18px 0 8px;}
 footer .accept-row{display:flex; justify-content:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;}
 footer .accept-badge{font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:var(--ink);
-  border:1.5px solid var(--ink); border-radius:3px; padding:5px 10px; background:var(--card);
+  border:1px solid var(--line-strong); border-radius:3px; padding:5px 10px; background:var(--card);
   display:inline-flex; align-items:center; gap:5px;}
 footer .accept-badge svg, footer .accept-badge img{width:14px; height:14px; flex-shrink:0; object-fit:contain;}
 
-.skeleton{background:linear-gradient(90deg, var(--paper) 25%, var(--paper-2) 37%, var(--paper) 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite;
-  border:1.5px dashed var(--line-strong);}
+.skeleton{background:linear-gradient(90deg, var(--panel-2) 25%, var(--card) 37%, var(--panel-2) 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite;
+  border:1px dashed var(--line-strong);}
 @keyframes shimmer{0%{background-position:100% 0;} 100%{background-position:0 0;}}
 
 .toast{position:fixed; left:16px; right:16px; bottom:20px; z-index:200; padding:13px 16px; border-radius:3px;
-  background:var(--ink); color:var(--paper); font-size:13.5px; text-align:center; font-weight:600;
+  background:var(--card); color:var(--ink); font-size:13.5px; text-align:center; font-weight:600;
+  border:1px solid var(--line-strong); box-shadow:0 0 16px rgba(0,209,255,.25);
   transform:translateY(120%); transition:transform .25s ease;}
 .toast.show{transform:translateY(0);}
-.toast.err{background:var(--stamp); color:#fff;}
+.toast.err{background:rgba(255,59,107,.12); color:var(--stamp); border-color:var(--stamp);}
 
 /* ---------- micro-interactions: press feedback ---------- */
 .game-card, .product-card, .btn-primary, .back-btn, .contact-btn, .close-btn, .social-link{
-  transition:transform .15s cubic-bezier(.34,1.56,.64,1), box-shadow .15s ease, opacity .15s ease;
+  transition:transform .15s cubic-bezier(.34,1.56,.64,1), box-shadow .15s ease, opacity .15s ease, border-color .15s ease;
   will-change:transform;
 }
-.game-card:active, .contact-btn:active, .close-btn:active, .social-link:active{transform:translate(2px,2px); box-shadow:1px 1px 0 var(--line-strong) !important;}
-.product-card:active{transform:translate(2px,2px); box-shadow:1px 1px 0 var(--line-strong) !important;}
-.btn-primary:active:not(:disabled){transform:translate(2px,2px); box-shadow:1px 1px 0 var(--ink) !important;}
-.back-btn:active{transform:translate(2px,2px) rotate(-4deg); box-shadow:1px 1px 0 var(--line-strong) !important;}
-.product-card.selected{transform:translate(-1px,-1px);}
+.game-card:active{border-color:var(--bakong); box-shadow:0 0 16px rgba(0,209,255,.4) !important;}
+.contact-btn:active, .close-btn:active, .social-link:active{transform:translateY(1px);}
+.product-card:active{border-color:var(--bakong); box-shadow:0 0 16px rgba(0,209,255,.4) !important;}
+.btn-primary:active:not(:disabled){transform:translateY(1px); box-shadow:0 0 10px rgba(0,209,255,.4) !important;}
+.back-btn:active{transform:translateY(1px);}
+.product-card.selected{transform:translateY(-1px);}
 
 /* ---------- micro-interactions: scroll reveal ---------- */
 .fade-in-section{opacity:0; transform:translateY(18px); transition:opacity .55s cubic-bezier(.2,.8,.2,1), transform .55s cubic-bezier(.2,.8,.2,1);}
@@ -360,12 +378,12 @@ footer .accept-badge svg, footer .accept-badge img{width:14px; height:14px; flex
 /* ---------- social icons ---------- */
 .social-row{display:flex; justify-content:center; align-items:center; gap:14px; margin:14px 0 6px;}
 .social-link{width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-  background:var(--card); border:1.5px solid var(--ink);}
+  background:var(--card); border:1px solid var(--line-strong);}
 .social-link svg{width:19px; height:19px;}
 .social-link.telegram{color:#29A9EA;}
 .social-link.facebook{color:#1877F2;}
 .social-link.tiktok{color:var(--ink);}
-.social-link:hover{box-shadow:2px 2px 0 var(--line-strong);}
+.social-link:hover{box-shadow:0 0 12px rgba(0,209,255,.4); border-color:var(--bakong);}
 
 @media (prefers-reduced-motion: reduce){ *{transition:none !important; animation:none !important;} }
 </style>
