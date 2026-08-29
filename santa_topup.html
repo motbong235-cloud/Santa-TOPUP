@@ -1,0 +1,1051 @@
+<!--
+DESIGN PLAN — SANTA TOPUP storefront (Gift Ledger)
+Subject: Cambodian mobile-game diamond top-up shop, paid via KHQR (Bakong).
+Audience: young Khmer mobile gamers on phones, low patience, want 3 taps to pay.
+Page's job: pick game -> pick diamond package -> confirm player ID -> pay via KHQR -> see delivery.
+
+Concept: Santa's whole job is turning a payment into a delivered gift — so the UI
+reads as kraft gift-wrap and hand-written gift tags rather than a neon storefront.
+Warm paper, deep pine-green ink, a wax-seal stamp instead of a rubber stamp, a
+single-hole gift tag instead of a two-hole ticket stub. Same honest, flat,
+no-glow material language as the receipt-shop original, different real-world
+object: a gift, not a ticket.
+
+Color (named):
+  --paper / --paper-2: #FBF2E3 / #F3E4C8   (warm kraft/cream paper, two shades for stripes)
+  --card:  #FFFDF8                          (whiter card stock, sits above the paper)
+  --ink:   #1F3A2E                          (deep pine green — text)
+  --ink-soft: #6B7C6F                       (muted sage — secondary text)
+  --stamp: #A31621                          (cranberry wax-seal red — urgent/danger/badges)
+  --bakong:#1E5AA8                          (KHQR/Bakong blue — the one real brand tie, CTA only)
+  --paid:  #2F6B4F                          (forest green — success)
+  --line:  #E8D9BA                          (gift-wrap crease / dashed dividers)
+
+Type: Fraunces (display — warm high-contrast serif, gift-card lettering)
+      Archivo (body — grotesk, plain and legible)
+      Space Mono (prices, IDs, trx refs — typewriter/receipt-printer feel)
+      Kantumruy Pro (Khmer, paired throughout)
+
+Signature element: a scalloped ribbon edge (wave clip-path) on the hero banner and
+the payment sheet's top edge, as if unwrapping a ribbon-tied gift; game and product
+cards get a single die-cut gift-tag hole at a slight rotation instead of a two-hole
+ticket-stub seam, and successful payments get a rotated gold wax-seal badge.
+-->
+<!DOCTYPE html>
+<html lang="km">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SANTA TOPUP</title>
+<meta name="description" content="Game top-up Free Fire, Mobile Legends — ទូទាត់ KHQR លឿន សុវត្ថិភាព ដឹកជញ្ជូនស្វ័យប្រវត្តិ">
+<meta property="og:title" content="SANTA TOPUP">
+<meta property="og:description" content="Game top-up Free Fire, Mobile Legends — ទូទាត់ KHQR លឿន សុវត្ថិភាព">
+<meta property="og:image" content="/icon-512.png">
+<meta property="og:type" content="website">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="theme-color" content="#A31621">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Archivo:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&family=Kantumruy+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<style>
+:root{
+  --paper:#FBF2E3; --paper-2:#F3E4C8; --card:#FFFDF8;
+  --ink:#1F3A2E; --ink-soft:#6B7C6F;
+  --stamp:#A31621; --bakong:#1E5AA8; --paid:#2F6B4F;
+  --line:#E8D9BA; --line-strong:#D4BD8E;
+  --text:var(--ink); --muted:var(--ink-soft); --gold:var(--stamp); --gem:var(--bakong); --success:var(--paid); --danger:#A31621;
+  --notch:9px;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+.icon{display:inline-block; vertical-align:-3px; line-height:0;}
+.icon svg{width:1em; height:1em; display:block;}
+html,body{margin:0; padding:0; min-height:100%;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 63px, rgba(28,27,25,.035) 63px 64px),
+    radial-gradient(rgba(28,27,25,.03) 1px, transparent 1px) 0 0/14px 14px,
+    var(--paper);
+  color:var(--text); font-family:'Archivo','Kantumruy Pro',sans-serif; overflow-x:hidden;}
+h1,h2,h3,.display,.topbar .sitename,footer .fname,.detail-header .gname,.game-card .info .gname,.product-card .pname,.btn-primary,.sheet h3{
+  font-family:'Fraunces','Kantumruy Pro',sans-serif; letter-spacing:.6px; font-weight:400;}
+.mono{font-family:'Space Mono','Kantumruy Pro',monospace;}
+a{color:inherit; text-decoration:none;}
+button{font-family:inherit; cursor:pointer; border:none; background:none;}
+::-webkit-scrollbar{display:none;}
+
+/* signature: a die-cut ticket-stub corner (one small triangle bitten out) */
+.facet{
+  clip-path: polygon(14px 0, 100% 0, 100% 100%, 0 100%, 0 14px);
+  position:relative;
+}
+.facet::after{
+  content:""; position:absolute; top:0; left:0; width:14px; height:14px;
+  background:
+    radial-gradient(circle at 0 0, transparent 14px, var(--paper) 14.5px);
+  pointer-events:none;
+}
+
+/* ---------- top bar ---------- */
+.topbar{
+  position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; gap:10px;
+  padding:13px 16px; background:var(--paper);
+  border-bottom:2px dashed var(--line-strong);
+}
+.topbar img.logo{height:32px; width:32px; border-radius:6px; object-fit:cover; border:1.5px solid var(--ink); box-shadow:1.5px 1.5px 0 var(--line-strong);}
+.topbar .sitename{font-size:22px; letter-spacing:1.2px; position:relative;}
+.topbar .sitename::after{
+  content:"KHQR"; position:absolute; top:-6px; right:-30px; font-family:'Space Mono',monospace;
+  font-size:7.5px; font-weight:700; color:var(--bakong); border:1px solid var(--bakong);
+  border-radius:2px; padding:1px 3px; transform:rotate(-8deg); letter-spacing:.5px;
+}
+.topbar .spacer{flex:1;}
+.topbar .contact-btn{
+  display:flex; align-items:center; gap:6px; padding:8px 12px;
+  background:var(--card); color:var(--ink); font-size:12.5px; font-weight:700;
+  border:1.5px solid var(--ink); border-radius:3px;
+  box-shadow:2px 2px 0 var(--ink);
+}
+
+/* ---------- hero banner: torn receipt edge ---------- */
+.hero{position:relative; width:100%; aspect-ratio:16/8.4; overflow:hidden; background:var(--card);
+  clip-path: polygon(
+    0 0, 100% 0, 100% 94%,
+    95% 100%, 90% 94%, 85% 100%, 80% 94%, 75% 100%, 70% 94%, 65% 100%, 60% 94%, 55% 100%,
+    50% 94%, 45% 100%, 40% 94%, 35% 100%, 30% 94%, 25% 100%, 20% 94%, 15% 100%, 10% 94%, 5% 100%, 0 94%
+  );
+}
+.hero-track{display:flex; height:100%; transition:transform .5s ease;}
+.hero-slide{flex:0 0 100%; height:100%;}
+.hero-slide img{width:100%; height:100%; object-fit:cover; display:block;}
+.hero-dots{position:absolute; bottom:16px; left:0; right:0; display:flex; justify-content:center; gap:6px;}
+.hero-dots span{width:5px; height:5px; border-radius:50%; background:rgba(28,27,25,.28); transition:width .3s ease, border-radius .3s ease, background .3s ease;}
+.hero-dots span.active{background:var(--stamp); width:15px; border-radius:3px;}
+.hero-empty{display:flex; align-items:center; justify-content:center; gap:6px; height:100%; color:var(--muted); font-size:13px; background:
+  repeating-linear-gradient(135deg, var(--paper-2) 0 10px, var(--paper) 10px 20px);}
+
+/* ---------- small promo ---------- */
+.promo-strip{display:flex; gap:10px; padding:14px 16px 4px; overflow-x:auto;}
+.promo-strip img{height:62px; border-radius:2px; flex:0 0 auto; border:1.5px solid var(--ink); box-shadow:2px 2px 0 var(--line-strong); transition:transform .15s ease, box-shadow .15s ease;}
+.promo-strip img:active{transform:translate(2px,2px) rotate(-1deg); box-shadow:0 0 0 var(--line-strong);}
+
+/* ---------- section ---------- */
+.section{padding:20px 16px 10px;}
+.section h2{font-size:19px; color:var(--ink); font-weight:400; letter-spacing:1px; margin:0 0 12px;
+  display:flex; align-items:center; gap:10px;}
+.section h2::before{content:""; width:8px; height:8px; border-radius:50%; background:var(--stamp); flex-shrink:0;}
+.section h2::after{content:""; flex:1; height:0; border-top:2px dashed var(--line-strong); transform:translateY(-2px);}
+
+/* ---------- game grid: ticket cards ---------- */
+.game-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:0 16px 22px;}
+.game-card, .product-card, .id-form, .sheet{
+  background:var(--card); border:1.5px solid var(--ink);
+  box-shadow:3px 3px 0 var(--line-strong);
+}
+@keyframes cardIn{from{opacity:0; transform:translateY(12px) scale(.97);} to{opacity:1; transform:translateY(0) scale(1);}}
+.game-card{
+  position:relative; overflow:visible;
+  display:flex; flex-direction:column;
+  animation:cardIn .4s cubic-bezier(.2,.8,.2,1) both;
+}
+.game-card:nth-child(1){animation-delay:.03s;} .game-card:nth-child(2){animation-delay:.08s;}
+.game-card:nth-child(3){animation-delay:.13s;} .game-card:nth-child(4){animation-delay:.18s;}
+.game-card:nth-child(n+5){animation-delay:.22s;}
+.game-card .media{position:relative; aspect-ratio:1/.8; overflow:hidden; background:var(--paper-2);}
+.game-card .media img{width:100%; height:100%; object-fit:cover; display:block; transition:transform .35s ease;}
+.game-card:active .media img{transform:scale(1.08);}
+.game-card .gem-badge{position:absolute; top:-8px; right:8px; z-index:2; width:26px; height:26px; border-radius:50%;
+  background:var(--stamp); display:flex; align-items:center; justify-content:center;
+  color:#fff; border:2px solid var(--ink); transform:rotate(-8deg);}
+.game-card .gem-badge svg{width:12px; height:12px;}
+/* die-cut notches at the ticket-stub seam */
+.game-card .info{position:relative; z-index:2; padding:12px 10px 10px; background:var(--card);
+  border-top:2px dashed var(--line-strong); display:flex; flex-direction:column; gap:3px;}
+.game-card .info::before, .game-card .info::after{
+  content:""; position:absolute; top:-9px; width:16px; height:16px; border-radius:50%;
+  background:var(--paper); border:1.5px solid var(--ink); z-index:3;
+}
+.game-card .info::before{left:-9px;}
+.game-card .info::after{right:-9px;}
+.game-card .info .gname{font-size:17px; letter-spacing:.5px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.game-card .info .cta{display:flex; align-items:center; gap:3px; font-size:11px; font-weight:700; color:var(--bakong); text-transform:uppercase; letter-spacing:.4px;}
+.game-card .info .cta svg{width:10px; height:10px;}
+
+/* ---------- product grid (game detail) ---------- */
+@keyframes slideInLeft{from{opacity:0; transform:translateX(-14px);} to{opacity:1; transform:translateX(0);}}
+.detail-header{display:flex; align-items:center; gap:12px; padding:16px 16px 12px; animation:slideInLeft .3s cubic-bezier(.2,.8,.2,1) both;}
+.back-btn{width:36px; height:36px; border-radius:4px; background:var(--card); border:1.5px solid var(--ink);
+  display:flex; align-items:center; justify-content:center; font-size:18px; box-shadow:2px 2px 0 var(--line-strong);}
+.detail-header .gname{font-size:22px; letter-spacing:.8px;}
+
+.id-form{margin:0 16px 16px; padding:16px 14px; position:relative; animation:cardIn .35s cubic-bezier(.2,.8,.2,1) .05s both;}
+.id-form label{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; display:block; margin-bottom:7px; font-weight:700;}
+.id-row{display:flex; gap:8px; margin-bottom:10px;}
+.id-field{position:relative; flex:1;}
+.id-field.zone-field{flex:0 0 100px;}
+.id-field .field-icon{position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none; z-index:1;}
+.id-field .field-icon svg{width:16px; height:16px;}
+.id-row input{width:100%; background:var(--paper); border:1.5px solid var(--ink); color:var(--ink);
+  padding:11px 12px 11px 34px; border-radius:3px; font-size:14px; font-family:'Space Mono','Kantumruy Pro',monospace; transition:border-color .15s ease;}
+.id-row input:focus{outline:2px solid var(--bakong); outline-offset:1px;}
+@keyframes statusIn{from{opacity:0; transform:translateY(-3px);} to{opacity:1; transform:translateY(0);}}
+.id-status{font-size:13px; min-height:18px; padding-top:2px; display:flex; align-items:center; gap:5px; font-weight:600; animation:statusIn .2s ease both;}
+.id-status.ok{color:var(--paid);}
+.id-status.err{color:var(--stamp);}
+.id-status.checking{color:var(--muted);}
+.empty-products{grid-column:1/-1; text-align:center; padding:34px 16px; color:var(--muted); font-size:13.5px; display:flex; flex-direction:column; align-items:center; gap:8px;
+  border:1.5px dashed var(--line-strong); border-radius:4px; background:var(--card);}
+.recent-ids{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
+.id-chip{display:flex; align-items:center; gap:5px; padding:6px 11px; border-radius:20px; background:var(--paper);
+  border:1.5px solid var(--ink); color:var(--ink); font-size:12px; font-weight:700;}
+.id-chip svg{width:12px; height:12px;}
+
+.product-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px 12px; padding:0 16px 18px;}
+@keyframes stampPop{0%{opacity:0; transform:scale(.3) rotate(-20deg);} 60%{opacity:1; transform:scale(1.15) rotate(4deg);} 100%{opacity:1; transform:scale(1) rotate(0);}}
+.product-card{
+  padding:14px 12px 16px; text-align:center; position:relative; overflow:visible;
+  animation:cardIn .35s cubic-bezier(.2,.8,.2,1) both;
+  display:flex; flex-direction:column; align-items:center;
+}
+.product-card:nth-child(1){animation-delay:.02s;} .product-card:nth-child(2){animation-delay:.06s;}
+.product-card:nth-child(3){animation-delay:.1s;} .product-card:nth-child(4){animation-delay:.14s;}
+.product-card:nth-child(n+5){animation-delay:.16s;}
+.product-card.selected{border-color:var(--bakong); box-shadow:3px 3px 0 var(--bakong);}
+.product-card.selected::after{
+  animation:stampPop .35s cubic-bezier(.3,1.6,.5,1) both;
+  content:"✓"; position:absolute; top:-9px; right:-9px; width:22px; height:22px; border-radius:50%;
+  background:var(--bakong); color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center;
+  justify-content:center; border:1.5px solid var(--ink); box-shadow:1.5px 1.5px 0 var(--ink);
+}
+/* popular badge: a small folded ribbon flag instead of a plain pill */
+.product-card .badge{position:absolute; top:-6px; left:12px; font-size:9.5px; background:var(--stamp); color:#fff;
+  padding:4px 8px 6px 7px; font-weight:700; display:flex; align-items:center; gap:3px; border:1.5px solid var(--ink);
+  border-radius:2px 2px 2px 0; transform:rotate(-3deg); z-index:2;
+  clip-path:polygon(0 0, 100% 0, 100% 100%, 50% 82%, 0 100%);}
+.product-card .badge svg{width:9px; height:9px;}
+.product-card .pmedia{width:52px; height:52px; margin:0 auto 8px; border-radius:50%; overflow:hidden;
+  background:var(--paper-2); border:1.5px dashed var(--line-strong);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.product-card .pmedia img{width:100%; height:100%; object-fit:cover; display:block;}
+.product-card .pmedia .fallback{color:var(--stamp); opacity:.85;}
+.product-card .pmedia .fallback svg{width:20px; height:20px;}
+.product-card .pname{font-size:13px; font-weight:600; line-height:1.25; flex:1;
+  min-height:2.5em; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+/* price gift-tag: a small rotated tag with a single die-cut string-hole,
+   like a real gift tag hanging off the package — the theme's signature swap
+   from the original two-hole ticket-stub seam. */
+.product-card .pstub{align-self:center; margin-top:10px; display:inline-flex; align-items:center; gap:6px;
+  padding:6px 12px 6px 8px; background:var(--paper-2); border:1.5px solid var(--ink); border-radius:2px 6px 6px 2px;
+  transform:rotate(-3deg); box-shadow:2px 2px 0 var(--line-strong); position:relative;}
+.product-card .pstub::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--paper);
+  border:1.5px solid var(--ink); flex-shrink:0;}
+.product-card .pprice{font-family:'Space Mono','Kantumruy Pro',monospace; color:var(--stamp); font-weight:700; font-size:15px;}
+
+@keyframes barUp{from{opacity:0; transform:translateY(100%);} to{opacity:1; transform:translateY(0);}}
+.buy-bar{position:sticky; bottom:0; z-index:40; padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+  background:var(--card); border-top:2px dashed var(--line-strong);
+  box-shadow:0 -3px 0 var(--paper), 0 -4px 0 var(--line);
+  display:flex; align-items:center; gap:12px; animation:barUp .3s cubic-bezier(.2,.8,.2,1) both;}
+.buy-bar .total{flex:1;}
+.buy-bar .total .l{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; font-weight:700;}
+.buy-bar .total .v{font-family:'Space Mono','Kantumruy Pro',monospace; font-size:19px; font-weight:700; color:var(--stamp);}
+.btn-primary{
+  background:var(--bakong); color:#fff; font-size:17px; letter-spacing:1px; padding:14px 26px;
+  border-radius:3px; border:1.5px solid var(--ink); box-shadow:3px 3px 0 var(--ink);
+}
+.btn-primary:disabled{background:var(--paper-2); color:var(--muted); box-shadow:3px 3px 0 var(--line);}
+
+/* ---------- payment sheet: torn receipt slip ---------- */
+@keyframes backdropIn{from{opacity:0;} to{opacity:1;}}
+@keyframes sheetUp{from{opacity:0; transform:translateY(26px);} to{opacity:1; transform:translateY(0);}}
+.sheet-backdrop{position:fixed; inset:0; background:rgba(28,27,25,.55); z-index:90; display:flex; align-items:flex-end;
+  animation:backdropIn .2s ease both;}
+.sheet{width:100%; background:var(--card); padding:26px 20px calc(20px + env(safe-area-inset-bottom));
+  animation:sheetUp .32s cubic-bezier(.2,.8,.2,1) both;
+  clip-path: polygon(
+    0 10px, 3% 3px, 6% 10px, 9% 3px, 12% 10px, 15% 3px, 18% 10px, 21% 3px, 24% 10px, 27% 3px,
+    30% 10px, 33% 3px, 36% 10px, 39% 3px, 42% 10px, 45% 3px, 48% 10px, 51% 3px, 54% 10px, 57% 3px,
+    60% 10px, 63% 3px, 66% 10px, 69% 3px, 72% 10px, 75% 3px, 78% 10px, 81% 3px, 84% 10px, 87% 3px,
+    90% 10px, 93% 3px, 96% 10px, 99% 3px, 100% 10px,
+    100% 100%, 0 100%
+  );
+  max-height:88vh; overflow-y:auto; border:none;
+}
+.sheet h3{margin:10px 0 4px; font-size:24px; letter-spacing:.6px;}
+.sheet .sub{color:var(--muted); font-size:12px; margin-bottom:16px; text-transform:uppercase; letter-spacing:1px; font-weight:700;}
+@keyframes qrPulse{0%,100%{box-shadow:3px 3px 0 var(--line-strong);} 50%{box-shadow:3px 3px 0 var(--bakong);}}
+.qr-frame{background:#fff; padding:16px; margin:0 auto 14px; width:min(230px,68vw);
+  border:1.5px solid var(--ink); box-shadow:3px 3px 0 var(--line-strong);
+  animation:qrPulse 2.2s ease-in-out infinite;}
+.qr-frame canvas, .qr-frame img{width:100%; height:auto; display:block;}
+.pay-url-btn{display:block; text-align:center; margin:0 auto 14px; color:var(--bakong); font-size:13px; font-weight:700; text-decoration:underline;}
+.pay-amount{text-align:center; font-family:'Space Mono','Kantumruy Pro',monospace; font-size:26px; color:var(--stamp); font-weight:700; margin-bottom:4px;}
+.pay-timer{text-align:center; color:var(--muted); font-size:13px; margin-bottom:16px; font-family:'Space Mono',monospace;}
+@keyframes stampSlam{0%{opacity:0; transform:scale(2) rotate(-1.2deg);} 70%{opacity:1; transform:scale(.92) rotate(-1.2deg);} 100%{opacity:1; transform:scale(1) rotate(-1.2deg);}}
+.pay-status{text-align:center; padding:13px; border-radius:3px; font-size:14px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:6px;
+  border:1.5px dashed var(--line-strong);}
+.pay-status.waiting{background:var(--paper); color:var(--muted);}
+.pay-status.success{background:#fff; color:var(--paid); border:3px solid var(--paid); transform:rotate(-1.2deg); animation:stampSlam .4s cubic-bezier(.2,.8,.2,1) both;
+  text-transform:uppercase; letter-spacing:1px;}
+.pay-status.processing{background:rgba(30,90,168,.08); color:var(--bakong); border-style:solid; border-color:var(--bakong);}
+.pay-status.failed{background:#fff; color:var(--stamp); border:3px solid var(--stamp); transform:rotate(-1.2deg); animation:stampSlam .4s cubic-bezier(.2,.8,.2,1) both;
+  text-transform:uppercase; letter-spacing:1px;}
+
+@keyframes fadeUp{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);}}
+.receipt{margin-top:16px; background:var(--paper); border:1.5px dashed var(--line-strong); border-radius:3px; padding:14px 16px;
+  animation:fadeUp .3s ease both;}
+.receipt-row{display:flex; justify-content:space-between; gap:12px; padding:6px 0; font-size:13px; border-bottom:1px dotted var(--line-strong);
+  animation:fadeUp .3s ease both;}
+.receipt-row:nth-child(1){animation-delay:.03s;} .receipt-row:nth-child(2){animation-delay:.07s;}
+.receipt-row:nth-child(3){animation-delay:.11s;} .receipt-row:nth-child(4){animation-delay:.15s;}
+.receipt-row:nth-child(n+5){animation-delay:.18s;}
+.receipt-row:last-child{border-bottom:none;}
+.receipt-row .l{color:var(--muted);}
+.receipt-row .v{font-family:'Space Mono',monospace; font-weight:700; text-align:right;}
+.receipt-total{display:flex; justify-content:space-between; margin-top:8px; padding-top:10px; border-top:2px dashed var(--line-strong); font-weight:700;}
+.receipt-total .v{font-family:'Space Mono',monospace; color:var(--stamp); font-size:16px;}
+@keyframes copyBounce{0%{transform:scale(1);} 40%{transform:scale(1.04);} 100%{transform:scale(1);}}
+.copy-receipt-btn{width:100%; margin-top:12px; padding:11px; border-radius:3px; background:var(--bakong); color:#fff; font-weight:700; font-size:13px;
+  display:flex; align-items:center; justify-content:center; gap:6px; border:1.5px solid var(--ink); box-shadow:2px 2px 0 var(--ink);
+  transition:background .2s ease;}
+.copy-receipt-btn.copied{background:var(--paid); animation:copyBounce .3s ease;}
+.giftcard-note{font-size:13px; color:var(--muted); line-height:1.5; padding:4px 0; display:flex; align-items:center; gap:8px;}
+.giftcard-code-box{margin-top:10px; padding:14px; border-radius:3px; background:#fff; border:1.5px dashed var(--stamp); text-align:center; animation:fadeUp .3s ease .1s both;}
+.giftcard-code-box .l{font-size:11.5px; color:var(--muted); margin-bottom:6px; display:flex; align-items:center; justify-content:center; gap:5px; text-transform:uppercase; letter-spacing:.5px; font-weight:700;}
+.giftcard-code-box .code-value{font-family:'Space Mono',monospace; font-size:15px; font-weight:700; color:var(--ink); letter-spacing:.5px; word-break:break-all;}
+.sheet .close-btn{width:100%; margin-top:16px; padding:12px; background:var(--paper); color:var(--muted); border-radius:3px; font-weight:700;
+  border:1.5px solid var(--line-strong);}
+
+/* ---------- footer ---------- */
+footer{padding:30px 16px 40px; text-align:center; color:var(--muted); font-size:12px; border-top:2px dashed var(--line-strong); margin-top:12px;}
+footer .fname{color:var(--ink); font-size:20px; letter-spacing:.8px; margin-bottom:6px;}
+footer .links{display:flex; justify-content:center; gap:16px; margin:10px 0;}
+footer .links a{color:var(--ink); text-decoration:underline; font-weight:600; font-size:11.5px;}
+footer .trust-badge{display:inline-flex; align-items:center; gap:6px; margin:10px auto 4px; padding:6px 14px;
+  border:1.5px dashed var(--line-strong); border-radius:20px; font-size:11px; font-weight:700; color:var(--paid);}
+footer .trust-badge svg{width:13px; height:13px; flex-shrink:0;}
+footer .accept-label{font-size:10px; text-transform:uppercase; letter-spacing:1.2px; color:var(--muted); font-weight:700; margin:18px 0 8px;}
+footer .accept-row{display:flex; justify-content:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;}
+footer .accept-badge{font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:var(--ink);
+  border:1.5px solid var(--ink); border-radius:3px; padding:5px 10px; background:var(--card);
+  display:inline-flex; align-items:center; gap:5px;}
+footer .accept-badge svg, footer .accept-badge img{width:14px; height:14px; flex-shrink:0; object-fit:contain;}
+
+.skeleton{background:linear-gradient(90deg, var(--paper) 25%, var(--paper-2) 37%, var(--paper) 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite;
+  border:1.5px dashed var(--line-strong);}
+@keyframes shimmer{0%{background-position:100% 0;} 100%{background-position:0 0;}}
+
+.toast{position:fixed; left:16px; right:16px; bottom:20px; z-index:200; padding:13px 16px; border-radius:3px;
+  background:var(--ink); color:var(--paper); font-size:13.5px; text-align:center; font-weight:600;
+  transform:translateY(120%); transition:transform .25s ease;}
+.toast.show{transform:translateY(0);}
+.toast.err{background:var(--stamp); color:#fff;}
+
+/* ---------- micro-interactions: press feedback ---------- */
+.game-card, .product-card, .btn-primary, .back-btn, .contact-btn, .close-btn, .social-link{
+  transition:transform .15s cubic-bezier(.34,1.56,.64,1), box-shadow .15s ease, opacity .15s ease;
+  will-change:transform;
+}
+.game-card:active, .contact-btn:active, .close-btn:active, .social-link:active{transform:translate(2px,2px); box-shadow:1px 1px 0 var(--line-strong) !important;}
+.product-card:active{transform:translate(2px,2px); box-shadow:1px 1px 0 var(--line-strong) !important;}
+.btn-primary:active:not(:disabled){transform:translate(2px,2px); box-shadow:1px 1px 0 var(--ink) !important;}
+.back-btn:active{transform:translate(2px,2px) rotate(-4deg); box-shadow:1px 1px 0 var(--line-strong) !important;}
+.product-card.selected{transform:translate(-1px,-1px);}
+
+/* ---------- micro-interactions: scroll reveal ---------- */
+.fade-in-section{opacity:0; transform:translateY(18px); transition:opacity .55s cubic-bezier(.2,.8,.2,1), transform .55s cubic-bezier(.2,.8,.2,1);}
+.fade-in-section.visible{opacity:1; transform:translateY(0);}
+
+/* ---------- social icons ---------- */
+.social-row{display:flex; justify-content:center; align-items:center; gap:14px; margin:14px 0 6px;}
+.social-link{width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background:var(--card); border:1.5px solid var(--ink);}
+.social-link svg{width:19px; height:19px;}
+.social-link.telegram{color:#29A9EA;}
+.social-link.facebook{color:#1877F2;}
+.social-link.tiktok{color:var(--ink);}
+.social-link:hover{box-shadow:2px 2px 0 var(--line-strong);}
+
+@media (prefers-reduced-motion: reduce){ *{transition:none !important; animation:none !important;} }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+// ---- constants shared with the backend (must match server_v11.py) ----
+const PAYLOAD_KEY = "wJkxq6PKdxE+7OBOn6dk2yHA972vQ1cTUVSGhbSbtuA=";
+const PAY_TIMEOUT_SECONDS = 300; // 5 min KHQR expiry window
+
+// ---- state ----
+let state = {
+  view: "home",       // home | game
+  games: [],
+  banners: [],
+  settings: null,
+  activeGame: null,
+  products: [],
+  productsLoading: false,
+  selectedProduct: null,
+  playerId: "",
+  zoneId: "",
+  idCheck: null,       // null | "checking" | {ok:true,name} | {ok:false}
+  heroIndex: 0,
+};
+
+// ---- icon set (inline SVG, stroke-based — no emoji) ----
+const ICONS = {
+  check: `<span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12.5 9.5 18 20 6"/></svg></span>`,
+  cross: `<span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>`,
+  chat: `<span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>`,
+  image: `<span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>`,
+  star: `<span class="icon"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2.5l2.9 6.3 6.9.7-5.2 4.7 1.5 6.8L12 17.7l-6.1 3.3 1.5-6.8-5.2-4.7 6.9-.7z"/></svg></span>`,
+  chevronLeft: `<span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg></span>`,
+  telegram: `<span class="icon"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M21.5 3.5 2.6 10.9c-1.2.5-1.2 1.2-.2 1.5l4.8 1.5 1.8 5.6c.2.6.4.8.9.8.4 0 .6-.2.9-.5l2.2-2.1 4.6 3.4c.8.5 1.4.2 1.6-.8l3-14.1c.3-1.2-.4-1.8-1.7-1.7zM8.6 13.4l9.3-5.9c.4-.3.8-.1.5.2l-8 7.2-.3 3.2-1.5-4.7z"/></svg></span>`,
+  facebook: `<span class="icon"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M14.5 21v-7.6h2.6l.4-3h-3v-1.9c0-.9.2-1.5 1.5-1.5h1.6V4.3c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H9v3h2.4V21z"/></svg></span>`,
+  tiktok: `<span class="icon"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M16.5 3h-2.7v11.6a2.6 2.6 0 1 1-1.9-2.5V9.3a5.5 5.5 0 1 0 4.6 5.4V9.1c1 .7 2.2 1.1 3.5 1.1V7.5c-1.9 0-3.5-1.6-3.5-3.6z"/></svg></span>`,
+  user: `<span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c0-3.6 3.4-6.2 7.5-6.2s7.5 2.6 7.5 6.2"/></svg></span>`,
+  zone: `<span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 3 20.5 7.8 12 12.6 3.5 7.8"/><polyline points="3.5 12 12 16.8 20.5 12"/><polyline points="3.5 16.2 12 21 20.5 16.2"/></svg></span>`,
+  clock: `<span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg></span>`,
+  diamond: `<span class="icon"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M4 9l3.2-5h9.6L20 9l-8 11z"/></svg></span>`,
+  chevronRight: `<span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span>`,
+  history: `<span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 9 8 9"/><polyline points="12 8 12 12 15.5 14"/></svg></span>`,
+};
+
+// ---- helpers ----
+function $(sel, root){ return (root||document).querySelector(sel); }
+function vibrate(ms){ if(navigator.vibrate){ try{ navigator.vibrate(ms || 10); }catch(e){} } }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function toast(msg, isErr){
+  const t = $("#toast");
+  t.textContent = msg;
+  t.className = "toast show" + (isErr ? " err" : "");
+  clearTimeout(toast._h);
+  toast._h = setTimeout(()=> t.classList.remove("show"), 3200);
+}
+async function api(path, opts){
+  opts = opts || {};
+  const res = await fetch("/api/" + path, {
+    method: opts.method || "GET",
+    headers: Object.assign({"Content-Type":"application/json"}, opts.headers||{}),
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  let data;
+  try { data = await res.json(); } catch(e){ data = {}; }
+  return data;
+}
+function decryptPayload(payloadB64){
+  const bytes = CryptoJS.AES.decrypt(payloadB64, PAYLOAD_KEY);
+  const text = bytes.toString(CryptoJS.enc.Utf8);
+  return JSON.parse(text);
+}
+
+// ---- recent Player IDs (localStorage, per game — pure convenience, no server round-trip) ----
+const RECENT_IDS_KEY = "pvh_recent_ids_v1";
+function loadRecentIds(){
+  try{ return JSON.parse(localStorage.getItem(RECENT_IDS_KEY) || "{}"); }catch(e){ return {}; }
+}
+function saveRecentId(gameCode, playerId, zoneId, name){
+  if(!playerId) return;
+  const all = loadRecentIds();
+  const list = (all[gameCode] || []).filter(e => e.playerId !== playerId);
+  list.unshift({ playerId, zoneId: zoneId || "", name: name || "", ts: Date.now() });
+  all[gameCode] = list.slice(0, 3);
+  try{ localStorage.setItem(RECENT_IDS_KEY, JSON.stringify(all)); }catch(e){}
+}
+function getRecentIds(gameCode){
+  return (loadRecentIds()[gameCode] || []);
+}
+function lastUsedPlayerIdAnyGame(){
+  const all = loadRecentIds();
+  let best = null;
+  Object.values(all).forEach(list => (list||[]).forEach(e => { if(!best || e.ts > best.ts) best = e; }));
+  return best;
+}
+
+// ---- data loading ----
+async function loadSiteSettings(){
+  const r = await api("get-site-settings");
+  if(r.success) state.settings = r.settings;
+  renderTopbarAndFooter();
+}
+async function loadHome(){
+  const r = await api("get-home-data");
+  if(!r.success) { toast("មិនអាចផ្ទុកទិន្នន័យបានទេ", true); return; }
+  const payload = decryptPayload(r.payload);
+  state.games = payload.games || [];
+  state.banners = payload.banners || [];
+  render();
+  startHeroRotation();
+}
+async function openGame(game){
+  vibrate(8);
+  state.activeGame = game;
+  state.view = "game";
+  state.products = [];
+  state.productsLoading = true;
+  state.selectedProduct = null;
+  const recent = getRecentIds(game.code);
+  const last = recent[0];
+  state.playerId = last ? last.playerId : "";
+  state.zoneId = last ? last.zoneId : "";
+  state.idCheck = last ? {ok:true, name:last.name} : null;
+  render();
+  const r = await api("get-topup-data?id=" + encodeURIComponent(game.code));
+  state.productsLoading = false;
+  if(!r.success){ toast("មិនអាចផ្ទុក package បានទេ", true); render(); return; }
+  const payload = decryptPayload(r.payload);
+  state.products = payload.products || [];
+  render();
+}
+function goHome(){
+  vibrate(8);
+  state.view = "home";
+  state.activeGame = null;
+  render();
+}
+
+// ---- ID validation (debounced) ----
+let idCheckTimer = null;
+function onIdInput(field, value){
+  state[field] = value;
+  state.idCheck = null;
+  renderIdStatus();
+  clearTimeout(idCheckTimer);
+  const needsZone = !!state.activeGame.has_server_id;
+  if(!state.playerId || (needsZone && !state.zoneId)) return;
+  idCheckTimer = setTimeout(checkId, 550);
+}
+function isTelegramGame(g){
+  return !!g && (g.fulfillment_type === "telegram_stars" || g.fulfillment_type === "telegram_premium");
+}
+async function checkId(){
+  if(isTelegramGame(state.activeGame)){
+    // Khmer TopUp has no player-name check for Telegram usernames —
+    // skip the wasted round-trip and never block checkout on it.
+    state.idCheck = null;
+    renderIdStatus();
+    return;
+  }
+  state.idCheck = "checking";
+  renderIdStatus();
+  const r = await api("check-user", {method:"POST", body:{
+    gameCode: state.activeGame.code, userId: state.playerId, zoneId: state.zoneId || undefined,
+  }});
+  if(r.success && r.name){
+    state.idCheck = {ok:true, name:r.name};
+    saveRecentId(state.activeGame.code, state.playerId, state.zoneId, r.name);
+  } else if(r.success && r.name === null){
+    state.idCheck = null; // auto-check unavailable server-side, don't block checkout
+  } else {
+    state.idCheck = {ok:false};
+  }
+  renderIdStatus();
+}
+function renderIdStatus(){
+  const el = $("#idStatus");
+  if(!el) return;
+  if(state.idCheck === "checking"){ el.textContent = "កំពុងឆែក ID..."; el.className = "id-status checking"; }
+  else if(state.idCheck && state.idCheck.ok){ el.innerHTML = ICONS.check + " " + ICONS.user + " " + esc(state.idCheck.name); el.className = "id-status ok"; }
+  else if(state.idCheck && !state.idCheck.ok){
+    const label = isTelegramGame(state.activeGame) ? "រកមិនឃើញគណនី Telegram" : "រកមិនឃើញ Player ID";
+    el.innerHTML = ICONS.cross + " " + label; el.className = "id-status err";
+  }
+  else { el.textContent = ""; el.className = "id-status"; }
+  updateBuyBarState();
+}
+
+// ---- product selection ----
+function useRecentId(playerId, zoneId, name){
+  vibrate(8);
+  state.playerId = playerId;
+  state.zoneId = zoneId || "";
+  state.idCheck = {ok:true, name: name || ""};
+  render();
+}
+
+// ---- My Orders (order history lookup by player ID) ----
+function openMyOrders(){
+  vibrate(8);
+  const root = document.createElement("div");
+  root.className = "sheet-backdrop";
+  root.id = "ordersSheet";
+  const prefill = lastUsedPlayerIdAnyGame();
+  root.innerHTML = `
+    <div class="sheet">
+      <h3>ការបញ្ជាទិញរបស់ខ្ញុំ</h3>
+      <div class="sub">វាយ Player ID ដើម្បីមើលប្រវត្តិទិញ</div>
+      <div class="id-row">
+        <div class="id-field">
+          <span class="field-icon">${ICONS.user}</span>
+          <input type="text" inputmode="numeric" id="ordersSearchInput" placeholder="Player ID" value="${esc(prefill ? prefill.playerId : "")}">
+        </div>
+        <button class="btn-primary" style="padding:11px 18px" onclick="__app.searchMyOrders()">ស្វែងរក</button>
+      </div>
+      <div id="ordersResult"></div>
+      <button class="close-btn" onclick="__app.closeMyOrders()">បិទ</button>
+    </div>`;
+  document.body.appendChild(root);
+  if(prefill) searchMyOrders();
+}
+function closeMyOrders(){
+  const el = $("#ordersSheet");
+  if(el) el.remove();
+}
+async function searchMyOrders(){
+  const input = $("#ordersSearchInput");
+  const userId = input ? input.value.trim() : "";
+  const resultEl = $("#ordersResult");
+  if(!userId){ toast("សូមវាយ Player ID", true); return; }
+  resultEl.innerHTML = `<div class="skeleton" style="height:60px;border-radius:10px;margin-top:12px;"></div>`;
+  const r = await api("my-orders?userId=" + encodeURIComponent(userId));
+  if(!r.success){ resultEl.innerHTML = `<div class="empty-products">${ICONS.cross} មិនអាចផ្ទុកបានទេ</div>`; return; }
+  if(!r.orders.length){ resultEl.innerHTML = `<div class="empty-products">${ICONS.image} មិនទាន់មានការបញ្ជាទិញសម្រាប់ ID នេះទេ</div>`; return; }
+  resultEl.innerHTML = r.orders.map(o => `
+    <div class="receipt" style="margin-top:12px">
+      <div class="receipt-row"><span class="l">Trx ID</span><span class="v">${esc(o.trx_id)}</span></div>
+      <div class="receipt-row"><span class="l">ថ្ងៃ</span><span class="v">${esc(fmtDateTime(o.paid_at || o.created_at))}</span></div>
+      <div class="receipt-row"><span class="l">ហ្គេម / Package</span><span class="v">${esc(o.game_name)} / ${esc(o.product_name)}</span></div>
+      <div class="receipt-row"><span class="l">ស្ថានភាព</span><span class="v">${o.status === "paid" ? esc(deliveryStatusLabel(o.delivery_status)) : "មិនទាន់បង់ប្រាក់"}</span></div>
+      <div class="receipt-total"><span>តម្លៃ</span><span class="v">$${Number(o.amount).toFixed(2)}</span></div>
+      ${o.delivery_code ? `<div class="giftcard-code-box"><div class="l">${ICONS.image} Gift Card Code</div><div class="code-value">${esc(o.delivery_code)}</div></div>` : ""}
+    </div>`).join("");
+}
+
+function selectProduct(id){
+  vibrate(8);
+  state.selectedProduct = state.products.find(p => p.id === id) || null;
+  render();
+}
+function updateBuyBarState(){
+  const btn = $("#buyBtn");
+  if(!btn) return;
+  const g = state.activeGame;
+  if(g && g.fulfillment_type === "giftcard"){
+    btn.disabled = !state.selectedProduct;
+    return;
+  }
+  const needsZone = !!(g && g.has_server_id);
+  const ready = state.selectedProduct && state.playerId && (!needsZone || state.zoneId) && !(state.idCheck && state.idCheck.ok === false);
+  btn.disabled = !ready;
+}
+
+// ---- checkout / payment ----
+let pollPayTimer = null, pollTopupTimer = null, countdownTimer = null;
+
+async function buyNow(){
+  if(!state.selectedProduct) return;
+  vibrate(14);
+  const amount = Number(state.selectedProduct.price);
+  const userId = state.playerId;
+
+  const btn = $("#buyBtn");
+  if(btn){ btn.disabled = true; btn.textContent = "កំពុងបង្កើត QR..."; }
+
+  const r = await api("create-payment", {
+    method:"POST",
+    body:{userId, zoneId: state.zoneId || "", gameCode: state.activeGame.code, productId: state.selectedProduct.id},
+  });
+
+  if(!r.success){
+    toast(r.error || "បង្កើត QR មិនជោគជ័យ", true);
+    if(btn){ btn.disabled = false; btn.textContent = "ទិញឥឡូវ"; }
+    return;
+  }
+  openPaymentSheet(r.trx_id, r.qr_image, r.pay_url, amount);
+}
+
+function openPaymentSheet(trxId, qrImage, payUrl, amount){
+  let secondsLeft = PAY_TIMEOUT_SECONDS;
+  const root = document.createElement("div");
+  root.className = "sheet-backdrop";
+  root.id = "paySheet";
+  root.innerHTML = `
+    <div class="sheet">
+      <h3>ស្កេន QR ដើម្បីទូទាត់</h3>
+      <div class="sub">ABA PayWay</div>
+      <div class="qr-frame" id="qrFrame">${qrImage ? `<img src="${qrImage}" alt="ABA PayWay QR">` : ""}</div>
+      ${payUrl ? `<a class="pay-url-btn" href="${payUrl}" target="_blank" rel="noopener">បើកទំព័រទូទាត់</a>` : ""}
+      <div class="pay-amount">$${amount.toFixed(2)}</div>
+      <div class="pay-timer" id="payTimer">នៅសល់ 05:00</div>
+      <div class="pay-status waiting" id="payStatus">កំពុងរង់ចាំការទូទាត់...</div>
+      <button class="close-btn" id="closeSheetBtn">បិទ</button>
+    </div>`;
+  document.body.appendChild(root);
+
+  $("#closeSheetBtn").onclick = () => closePaymentSheet(trxId, true);
+
+  countdownTimer = setInterval(() => {
+    secondsLeft--;
+    const m = String(Math.floor(secondsLeft/60)).padStart(2,"0");
+    const s = String(secondsLeft%60).padStart(2,"0");
+    const timerEl = $("#payTimer");
+    if(timerEl) timerEl.textContent = `នៅសល់ ${m}:${s}`;
+    if(secondsLeft <= 0){
+      clearInterval(countdownTimer);
+      api("expire-payment", {method:"POST", body:{trx_id: trxId}});
+      setPayStatus("failed", "QR ផុតកំណត់ — សូមចាប់ផ្តើមម្តងទៀត");
+      clearInterval(pollPayTimer);
+    }
+  }, 1000);
+
+  pollPayTimer = setInterval(async () => {
+    const r = await api("check-payment", {method:"POST", body:{trx_id: trxId}});
+    if(r.paid){
+      clearInterval(pollPayTimer);
+      clearInterval(countdownTimer);
+      const ds = (r.data && r.data.delivery_status) || null;
+      handleDeliveryStatus(trxId, ds, r.data || null);
+    } else if(r.expired){
+      clearInterval(pollPayTimer);
+      clearInterval(countdownTimer);
+      setPayStatus("failed", "QR ផុតកំណត់ — សូមចាប់ផ្តើមម្តងទៀត");
+    }
+  }, 3000);
+}
+
+function setPayStatus(kind, html){
+  const el = $("#payStatus");
+  if(!el) return;
+  el.className = "pay-status " + kind;
+  el.innerHTML = html;
+}
+
+function fmtDateTime(iso){
+  if(!iso) return "—";
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return "—";
+  const pad = n => String(n).padStart(2,"0");
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function deliveryStatusLabel(ds){
+  if(ds === "delivered") return "✓ បានបញ្ជូនស្វ័យប្រវត្តិ";
+  if(ds === "processing") return "កំពុងបញ្ជូន";
+  if(ds === "failed") return "បញ្ជូនមិនកើត — ត្រូវការ manual";
+  return "រង់ចាំ admin បញ្ជូន";
+}
+function receiptText(order, trxId){
+  const g = state.activeGame, p = state.selectedProduct;
+  const isGiftcard = g && g.fulfillment_type === "giftcard";
+  const idLine = isTelegramGame(g) ? "Telegram Username" : "Player ID";
+  const lines = [
+    `វិក័យប័ត្រ SANTA TOPUP`,
+    `Trx ID: ${trxId}`,
+    `ថ្ងៃ: ${fmtDateTime(order.paid_at || order.created_at)}`,
+    `ហ្គេម: ${g ? g.name : order.game_code}`,
+    `Package: ${p ? p.name : ""}`,
+  ];
+  if(!isGiftcard) lines.push(`${idLine}: ${order.user_id}${order.zone_id ? " ("+order.zone_id+")" : ""}`);
+  lines.push(`តម្លៃ: $${Number(order.amount).toFixed(2)}`);
+  lines.push(`ស្ថានភាព: ${deliveryStatusLabel(order.delivery_status)}`);
+  if(order.delivery_code) lines.push(`Gift Card Code: ${order.delivery_code}`);
+  return lines.join("\n");
+}
+function renderReceipt(order, trxId){
+  const sheetEl = $("#paySheet .sheet");
+  if(!sheetEl) return;
+  const g = state.activeGame, p = state.selectedProduct;
+  const old = $("#receiptBlock");
+  if(old) old.remove();
+  const isGiftcard = g && g.fulfillment_type === "giftcard";
+  const idLabel = isTelegramGame(g) ? "Telegram Username" : "Player ID";
+  const block = document.createElement("div");
+  block.className = "receipt";
+  block.id = "receiptBlock";
+  block.innerHTML = `
+    <div class="receipt-row"><span class="l">Trx ID</span><span class="v">${esc(trxId)}</span></div>
+    <div class="receipt-row"><span class="l">ថ្ងៃ</span><span class="v">${esc(fmtDateTime(order.paid_at || order.created_at))}</span></div>
+    <div class="receipt-row"><span class="l">ហ្គេម</span><span class="v">${esc(g ? g.name : order.game_code)}</span></div>
+    <div class="receipt-row"><span class="l">Package</span><span class="v">${esc(p ? p.name : "")}</span></div>
+    ${isGiftcard ? "" : `<div class="receipt-row"><span class="l">${idLabel}</span><span class="v">${esc(order.user_id)}${order.zone_id ? " ("+esc(order.zone_id)+")" : ""}</span></div>`}
+    <div class="receipt-row"><span class="l">ស្ថានភាព</span><span class="v">${esc(deliveryStatusLabel(order.delivery_status))}</span></div>
+    <div class="receipt-total"><span>សរុប</span><span class="v">$${Number(order.amount).toFixed(2)}</span></div>
+    ${order.delivery_code ? `
+      <div class="giftcard-code-box">
+        <div class="l">${ICONS.image} Gift Card Code — redeem លើ roblox.com</div>
+        <div class="code-value" id="giftcardCodeValue">${esc(order.delivery_code)}</div>
+      </div>
+      <button class="copy-receipt-btn" id="copyCodeBtn">${ICONS.check} ចម្លង Code</button>
+    ` : ""}
+    <button class="copy-receipt-btn" id="copyReceiptBtn">${ICONS.chat} ចម្លងវិក័យប័ត្រ</button>
+  `;
+  sheetEl.insertBefore(block, $("#closeSheetBtn"));
+  if(order.delivery_code){
+    $("#copyCodeBtn").onclick = async () => {
+      const btn = $("#copyCodeBtn");
+      try{
+        await navigator.clipboard.writeText(order.delivery_code);
+        btn.classList.add("copied");
+        btn.innerHTML = `${ICONS.check} បានចម្លង Code!`;
+        setTimeout(()=>{ btn.classList.remove("copied"); btn.innerHTML = `${ICONS.check} ចម្លង Code`; }, 2000);
+      }catch(e){ toast("មិនអាចចម្លងបានទេ", true); }
+    };
+  }
+  $("#copyReceiptBtn").onclick = async () => {
+    const btn = $("#copyReceiptBtn");
+    try{
+      await navigator.clipboard.writeText(receiptText(order, trxId));
+      btn.classList.add("copied");
+      btn.innerHTML = `${ICONS.check} បានចម្លង!`;
+      setTimeout(()=>{ btn.classList.remove("copied"); btn.innerHTML = `${ICONS.chat} ចម្លងវិក័យប័ត្រ`; }, 2000);
+    }catch(e){ toast("មិនអាចចម្លងបានទេ", true); }
+  };
+}
+
+function handleDeliveryStatus(trxId, ds, order){
+  if(ds === "delivered"){
+    setPayStatus("success", ICONS.check + " ទូទាត់ជោគជ័យ — ទទួល Diamond ដោយស្វ័យប្រវត្តិ!");
+  } else if(ds === "processing"){
+    setPayStatus("processing", ICONS.clock + " កំពុងបញ្ជូន Diamond ស្វ័យប្រវត្តិ...");
+    pollTopupTimer = setInterval(async () => {
+      const r = await api("check-topup-status", {method:"POST", body:{trx_id: trxId}});
+      if(r.delivery_status === "delivered"){
+        clearInterval(pollTopupTimer);
+        setPayStatus("success", ICONS.check + " ទូទាត់ជោគជ័យ — ទទួល Diamond ដោយស្វ័យប្រវត្តិ!");
+        if(order){ order.delivery_status = "delivered"; renderReceipt(order, trxId); }
+      } else if(r.delivery_status === "failed"){
+        clearInterval(pollTopupTimer);
+        setPayStatus("failed", "ទូទាត់ជោគជ័យ ប៉ុន្តែបញ្ជូនស្វ័យប្រវត្តិមិនកើត — ទាក់ទង admin ខាងក្រោម");
+        if(order){ order.delivery_status = "failed"; renderReceipt(order, trxId); }
+      }
+    }, 4000);
+  } else if(ds === "failed"){
+    setPayStatus("failed", "ទូទាត់ជោគជ័យ ប៉ុន្តែបញ្ជូនស្វ័យប្រវត្តិមិនកើត — ទាក់ទង admin ខាងក្រោម");
+  } else {
+    setPayStatus("success", ICONS.check + " ទូទាត់ជោគជ័យ — admin នឹងបញ្ជូនជូនក្នុងពេលឆាប់ៗ");
+  }
+  if(order) renderReceipt(order, trxId);
+}
+
+function closePaymentSheet(trxId, userClosed){
+  clearInterval(pollPayTimer); clearInterval(pollTopupTimer); clearInterval(countdownTimer);
+  const el = $("#paySheet");
+  if(el) el.remove();
+  const btn = $("#buyBtn");
+  if(btn){ btn.disabled = false; btn.textContent = "ទិញឥឡូវ"; }
+  if(userClosed && trxId) api("expire-payment", {method:"POST", body:{trx_id: trxId}}).catch(()=>{});
+}
+
+// ---- hero rotation ----
+let heroTimer = null;
+function startHeroRotation(){
+  clearInterval(heroTimer);
+  const slides = (state.banners||[]).filter(b => b.type === "main_slider");
+  if(slides.length < 2) return;
+  heroTimer = setInterval(() => {
+    state.heroIndex = (state.heroIndex + 1) % slides.length;
+    const track = $("#heroTrack");
+    if(track) track.style.transform = `translateX(-${state.heroIndex*100}%)`;
+    document.querySelectorAll(".hero-dots span").forEach((d,i)=>d.classList.toggle("active", i===state.heroIndex));
+  }, 4000);
+}
+
+// ---- micro-interactions: reveal sections as they scroll into view ----
+let revealObserver = null;
+function initScrollReveal(){
+  if(!("IntersectionObserver" in window)) return;
+  if(!revealObserver){
+    revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if(entry.isIntersecting){
+          entry.target.classList.add("visible");
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, {threshold:0.12, rootMargin:"0px 0px -40px 0px"});
+  }
+  const targets = document.querySelectorAll(
+    "#main .section, #main .game-grid, #main .product-grid, #main .id-form, #main .hero, #main .promo-strip, #main .detail-header"
+  );
+  targets.forEach(el => {
+    if(!el.classList.contains("fade-in-section")){
+      el.classList.add("fade-in-section");
+      revealObserver.observe(el);
+    }
+  });
+}
+
+// ---- rendering ----
+function renderTopbarAndFooter(){
+  const s = state.settings || {};
+  const tb = $("#topbar");
+  if(tb){
+    tb.innerHTML = `
+      ${s.LOGO_URL ? `<img class="logo" src="${esc(s.LOGO_URL)}" alt="logo">` : ""}
+      <div class="sitename">${esc(s.SITE_NAME || "SANTA TOPUP")}</div>
+      <div class="spacer"></div>
+      <button class="contact-btn" onclick="__app.openMyOrders()">${ICONS.history} ការបញ្ជាទិញ</button>
+      ${s.ADMIN_TELEGRAM_LINK ? `<a class="contact-btn" href="${esc(s.ADMIN_TELEGRAM_LINK)}" target="_blank">${ICONS.chat} ជំនួយ</a>` : ""}
+    `;
+  }
+  const ft = $("#footer");
+  if(ft){
+    ft.innerHTML = `
+      <div class="fname">${esc(s.FOOTER_NAME || "SANTA TOPUP")}</div>
+      <div>${esc(s.FOOTER_DESC || "")}</div>
+      <div class="trust-badge">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="13" rx="1"/><path d="M3 12h18M12 8v13M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>
+        ទូទាត់សុវត្ថិភាព · ស្កេន KHQR ភ្លាមៗ
+      </div>
+      <div class="social-row">
+        ${s.ADMIN_TELEGRAM_LINK ? `<a class="social-link telegram" href="${esc(s.ADMIN_TELEGRAM_LINK)}" target="_blank" aria-label="Telegram">${ICONS.telegram}</a>` : ""}
+        ${s.FACEBOOK_LINK ? `<a class="social-link facebook" href="${esc(s.FACEBOOK_LINK)}" target="_blank" aria-label="Facebook">${ICONS.facebook}</a>` : ""}
+        ${s.TIKTOK_LINK ? `<a class="social-link tiktok" href="${esc(s.TIKTOK_LINK)}" target="_blank" aria-label="TikTok">${ICONS.tiktok}</a>` : ""}
+      </div>
+      <div class="accept-label">យើងទទួលទូទាត់</div>
+      <div class="accept-row">
+        <span class="accept-badge">
+          ${s.KHQR_LOGO_URL
+            ? `<img src="${esc(s.KHQR_LOGO_URL)}" alt="KHQR">`
+            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM19 14h2v2h-2zM14 19h2v2h-2zM19 19h2v2h-2z"/></svg>`}
+          KHQR
+        </span>
+        <span class="accept-badge">
+          ${s.ABA_LOGO_URL
+            ? `<img src="${esc(s.ABA_LOGO_URL)}" alt="ABA">`
+            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>`}
+          ABA PayWay
+        </span>
+      </div>
+      <div class="links">
+        <a href="/terms">លក្ខខណ្ឌប្រើប្រាស់</a>
+        <a href="/privacy">គោលការណ៍ឯកជនភាព</a>
+      </div>
+      <div>${esc(s.COPYRIGHT || "")}</div>
+    `;
+  }
+}
+
+function renderHeroAndPromo(){
+  const mainSlides = (state.banners||[]).filter(b=>b.type==="main_slider");
+  const promoSlides = (state.banners||[]).filter(b=>b.type==="small_promo");
+  const hero = mainSlides.length ? `
+    <div class="hero">
+      <div class="hero-track" id="heroTrack">
+        ${mainSlides.map(b => `<div class="hero-slide"><img src="${esc(b.image_url)}" alt=""></div>`).join("")}
+      </div>
+      ${mainSlides.length>1 ? `<div class="hero-dots">${mainSlides.map((_,i)=>`<span class="${i===0?'active':''}"></span>`).join("")}</div>` : ""}
+    </div>` : `<div class="hero"><div class="hero-empty">${ICONS.image} មិនទាន់មាន banner</div></div>`;
+  const promo = promoSlides.length ? `
+    <div class="promo-strip">${promoSlides.map(b=>`<img src="${esc(b.image_url)}" alt="">`).join("")}</div>` : "";
+  return hero + promo;
+}
+
+function renderHome(){
+  return `
+    ${renderHeroAndPromo()}
+    <div class="section"><h2>ជ្រើសរើសហ្គេម</h2></div>
+    <div class="game-grid">
+      ${state.games.length ? state.games.map(g => `
+        <div class="game-card facet" onclick="__app.openGame(${g.id})">
+          <div class="media">
+            ${g.image_url ? `<img src="${esc(g.image_url)}" alt="" loading="lazy">` : ""}
+            <div class="gem-badge">${isTelegramGame(g) ? ICONS.star : ICONS.diamond}</div>
+          </div>
+          <div class="info">
+            <div class="gname">${esc(g.name)}</div>
+            <div class="cta">ចាប់ផ្តើមទិញ ${ICONS.chevronRight}</div>
+          </div>
+        </div>`).join("") : `<div class="skeleton" style="height:150px;border-radius:12px;"></div><div class="skeleton" style="height:150px;border-radius:12px;"></div>`}
+    </div>
+  `;
+}
+
+function renderGame(){
+  const g = state.activeGame;
+  const needsZone = !!g.has_server_id;
+  const productsHtml = state.productsLoading
+    ? `<div class="skeleton" style="height:140px;border-radius:12px;"></div><div class="skeleton" style="height:140px;border-radius:12px;"></div><div class="skeleton" style="height:140px;border-radius:12px;"></div><div class="skeleton" style="height:140px;border-radius:12px;"></div>`
+    : (state.products.length ? state.products.map(p => `
+    <div class="product-card facet ${state.selectedProduct && state.selectedProduct.id===p.id ? 'selected':''}" onclick="__app.selectProduct(${p.id})">
+      ${p.section==='recommend' ? `<span class="badge">${ICONS.star} ពេញនិយម</span>` : ""}
+      <div class="pmedia">
+        ${p.image_url ? `<img src="${esc(p.image_url)}" alt="" loading="lazy">` : `<span class="fallback">${ICONS.diamond}</span>`}
+      </div>
+      <div class="pname">${esc(p.name)}</div>
+      <div class="pstub"><div class="pprice">$${Number(p.price).toFixed(2)}</div></div>
+    </div>`).join("") : `<div class="empty-products">${ICONS.image} មិនទាន់មាន package សម្រាប់ហ្គេមនេះទេ — សូមទាក់ទង admin</div>`);
+
+  const recent = getRecentIds(g.code).filter(e => e.playerId !== state.playerId);
+  const chipsHtml = recent.length ? `
+    <div class="recent-ids">
+      ${recent.map(e => `<button class="id-chip" onclick="__app.useRecentId('${esc(e.playerId)}','${esc(e.zoneId)}','${esc(e.name)}')">${ICONS.user} ${esc(e.name || e.playerId)}</button>`).join("")}
+    </div>` : "";
+
+  const isGiftcard = g.fulfillment_type === "giftcard";
+  const isTelegram = isTelegramGame(g);
+  const idLabel = isTelegram ? "Telegram Username" : "Player ID";
+  const idPlaceholder = isTelegram ? "បញ្ចូល Username (ឧ. @yourname)" : "បញ្ចូល Player ID";
+  const telegramNote = g.fulfillment_type === "telegram_stars"
+    ? (ICONS.star + " Stars នឹងផ្ញើទៅគណនី Telegram របស់អ្នកដោយផ្ទាល់ — សូមប្រាកដថា Username ត្រឹមត្រូវ")
+    : (ICONS.star + " Telegram Premium នឹងផ្ញើទៅគណនីរបស់អ្នកដោយផ្ទាល់ — សូមប្រាកដថា Username ត្រឹមត្រូវ");
+
+  return `
+    <div class="detail-header">
+      <div class="back-btn" onclick="__app.goHome()">${ICONS.chevronLeft}</div>
+      <div class="gname">${esc(g.name)}</div>
+    </div>
+    ${isGiftcard ? `
+    <div class="id-form">
+      <div class="giftcard-note">${ICONS.image} ទិញរួច នឹងទទួល Gift Card Code ភ្លាមៗ — ត្រូវ redeem ដោយខ្លួនឯងលើ roblox.com</div>
+    </div>` : `
+    <div class="id-form">
+      ${isTelegram ? '<div class="giftcard-note">' + telegramNote + '</div>' : ""}
+      <label>${idLabel}</label>
+      <div class="id-row">
+        <div class="id-field">
+          <span class="field-icon">${ICONS.user}</span>
+          <input type="text" inputmode="${isTelegram ? 'text' : 'numeric'}" placeholder="${idPlaceholder}" value="${esc(state.playerId)}"
+            oninput="__app.onIdInput('playerId', this.value)">
+        </div>
+        ${needsZone ? `<div class="id-field zone-field">
+          <span class="field-icon">${ICONS.zone}</span>
+          <input type="text" inputmode="numeric" placeholder="Zone ID" value="${esc(state.zoneId)}"
+            oninput="__app.onIdInput('zoneId', this.value)">
+        </div>` : ""}
+      </div>
+      <div class="id-status" id="idStatus"></div>
+      ${chipsHtml}
+    </div>`}
+    <div class="section"><h2>ជ្រើសរើស Package</h2></div>
+    <div class="product-grid">${productsHtml}</div>
+    <div class="buy-bar">
+      <div class="total">
+        <div class="l">សរុប</div>
+        <div class="v">$${state.selectedProduct ? Number(state.selectedProduct.price).toFixed(2) : "0.00"}</div>
+      </div>
+      <button class="btn-primary" id="buyBtn" disabled onclick="__app.buyNow()">ទិញឥឡូវ</button>
+    </div>
+  `;
+}
+
+function render(){
+  const app = $("#app");
+  app.innerHTML = `
+    <div class="topbar" id="topbar"></div>
+    <div id="main">${state.view === "home" ? renderHome() : renderGame()}</div>
+    <footer id="footer"></footer>
+  `;
+  renderTopbarAndFooter();
+  if(state.view === "game"){ renderIdStatus(); updateBuyBarState(); }
+  initScrollReveal();
+}
+
+// expose the handful of functions used by inline onclick/oninput in rendered HTML
+window.__app = { openGame: (id)=>{ const g = state.games.find(x=>x.id===id); if(g) openGame(g); },
+  goHome, selectProduct, onIdInput, buyNow, useRecentId, openMyOrders, closeMyOrders, searchMyOrders };
+
+// ---- boot ----
+render();
+loadSiteSettings();
+loadHome();
+
+})();
+</script>
+</body>
+</html>

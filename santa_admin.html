@@ -1,0 +1,1131 @@
+<!doctype html>
+<html lang="km">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SANTA TOPUP — Admin</title>
+<!--
+DESIGN — SANTA TOPUP Admin (Gift Ledger, matches storefront)
+Same warm kraft-paper/pine-ink/wax-seal tokens as the Santa TOPUP storefront,
+re-purposed for a data-dense back office: the nav reads like a gift ledger's
+tab index, tables like ruled ledger pages, status badges like small wax-seal
+tags. Fraunces for headings instead of Bebas Neue, cranberry red instead of
+PVH's stamp red — same bones as the receipt-shop admin, warmer materials.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Archivo:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&family=Kantumruy+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FBF2E3;
+  --paper:#FBF2E3; --paper-2:#F3E4C8; --panel:#FFFDF8; --panel-2:#FFFDF8; --panel-3:#F0E0BE;
+  --line:#E8D9BA; --line-strong:#D4BD8E;
+  --gold:#A31621; --gold-soft:#A31621; --gold-dim:#7a1018;
+  --teal:#1E5AA8; --red:#A31621; --green:#2F6B4F;
+  --text:#1F3A2E; --text-dim:#6B7C6F;
+  --radius:4px;
+  --shadow: 3px 3px 0 var(--line-strong);
+}
+*{box-sizing:border-box;}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:0;}
+body{
+  margin:0; background:var(--bg);
+  background-image:
+    repeating-linear-gradient(180deg, transparent 0 63px, rgba(31,58,46,.035) 63px 64px);
+  color:var(--text); font-family:'Archivo','Kantumruy Pro',sans-serif; font-size:16px;
+}
+h1,h2,h3,.khmer{font-family:'Fraunces','Kantumruy Pro',sans-serif; letter-spacing:.2px; font-weight:600;}
+.mono{font-family:'Space Mono',monospace;}
+a{color:inherit;}
+
+/* ---- Login gate: ticket-perforated card, matches storefront ---- */
+#gate{
+  height:100vh; display:flex; align-items:center; justify-content:center;
+  flex-direction:column; gap:16px; padding:20px;
+}
+#gate .card{
+  background:var(--panel); position:relative;
+  border:1.5px solid var(--text); border-radius:var(--radius);
+  padding:44px 36px 40px; width:100%; max-width:340px; text-align:center; box-shadow:var(--shadow);
+}
+#gate .card::before{
+  content:""; position:absolute; top:0; left:16px; right:16px; height:0;
+  border-top:2px dashed var(--line-strong);
+}
+#gate .card::after{
+  content:""; position:absolute; top:-8px; left:0; right:0; height:16px;
+  background:
+    radial-gradient(circle at 20px 0, transparent 8px, var(--paper) 8.5px) top/40px 16px repeat-x,
+    var(--panel);
+  -webkit-mask: radial-gradient(circle at 20px 8px, transparent 8px, #000 8.5px) top/40px 16px repeat-x;
+  mask: radial-gradient(circle at 20px 8px, transparent 8px, #000 8.5px) top/40px 16px repeat-x;
+  border-radius:var(--radius) var(--radius) 0 0;
+}
+#gate .logo-badge{
+  width:56px; height:56px; border-radius:50%; margin:0 auto 16px; display:flex; align-items:center;
+  justify-content:center; font-size:26px; background:var(--gold); color:#fff;
+  border:2px solid var(--text); transform:rotate(-6deg); position:relative; z-index:1;
+  box-shadow:2px 2px 0 var(--text);
+}
+#gate .brand{color:var(--text); font-size:28px; margin-bottom:4px; letter-spacing:1px; position:relative; z-index:1;}
+#gate p{color:var(--text-dim); margin:0 0 22px; font-size:12px; text-transform:uppercase; letter-spacing:1.5px; font-weight:700; position:relative; z-index:1;}
+#gate input{
+  width:100%; padding:13px 14px; border-radius:3px; border:1.5px solid var(--text);
+  background:var(--paper); color:var(--text); font-size:15px; margin-bottom:14px; transition:border-color .15s;
+  font-family:'Space Mono',monospace;
+}
+#gate input:focus{outline:none; border-color:var(--teal); box-shadow:0 0 0 2px rgba(30,90,168,.15);}
+#gate button, .btn{
+  width:100%; padding:13px; border-radius:3px; border:1.5px solid var(--text);
+  background:var(--teal); color:#fff; font-weight:700; font-size:15px;
+  cursor:pointer; letter-spacing:.3px; transition:transform .12s, box-shadow .12s;
+  box-shadow:2px 2px 0 var(--text);
+}
+#gate button:hover, .btn:hover{transform:translate(-1px,-1px); box-shadow:3px 3px 0 var(--text);}
+#gate button:active, .btn:active{transform:translate(2px,2px); box-shadow:0 0 0 var(--text);}
+#gate .err{color:var(--red); font-size:13px; min-height:18px; font-weight:600;}
+
+/* ---- App shell ---- */
+#app{display:none; height:100vh;}
+.shell{display:flex; height:100%; position:relative;}
+.overlay{
+  display:none; position:fixed; inset:0; background:rgba(28,27,25,.5); z-index:15;
+}
+.overlay.show{display:block;}
+
+/* ---- Nav: folder-tab index ---- */
+nav{
+  width:222px; background:var(--paper-2); border-right:1.5px solid var(--text);
+  padding:22px 0; flex-shrink:0; display:flex; flex-direction:column; z-index:20;
+}
+nav .logo{padding:0 20px 20px; color:var(--text); font-size:21px; letter-spacing:1px; border-bottom:2px dashed var(--line-strong); margin-bottom:14px; display:flex; align-items:center; gap:10px;}
+nav .logo .badge{width:32px;height:32px;border-radius:50%;background:var(--gold);color:#fff;border:1.5px solid var(--text);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0; transform:rotate(-6deg); box-shadow:1.5px 1.5px 0 var(--text);}
+nav .logo small{display:block; color:var(--text-dim); font-size:9.5px; font-family:'Archivo'; font-weight:700; letter-spacing:.14em; margin-top:1px;}
+nav button{
+  position:relative; text-align:left; background:none; border:none; color:var(--text-dim);
+  margin:0 10px 4px; padding:12px 14px; font-family:'Archivo'; font-size:14px; font-weight:600;
+  cursor:pointer; display:flex; align-items:center; gap:10px; border-radius:3px 10px 10px 3px;
+  transition:background .15s, color .15s, transform .1s;
+}
+nav button:hover{color:var(--text); background:rgba(255,253,246,.6);}
+nav button.active{
+  color:var(--text); background:var(--panel); font-weight:700;
+  box-shadow:-3px 0 0 var(--gold), 2px 2px 0 var(--line-strong);
+}
+nav .spacer{flex:1;}
+nav .logout{color:var(--red); font-size:13px; opacity:.85; font-weight:700; margin:8px 10px 0;}
+.topbar{display:none;}
+main{flex:1; overflow-y:auto; padding:30px 36px;}
+main h1{font-size:27px; margin:0 0 4px; color:var(--text); display:flex; align-items:center; gap:10px; letter-spacing:.6px;}
+main .sub{color:var(--text-dim); font-size:13.5px; margin:0 0 20px;}
+
+/* ---- Stat chips: small stamped totals ---- */
+.stats-row{display:flex; gap:14px; margin-bottom:22px; flex-wrap:wrap;}
+.stat-chip{
+  position:relative; background:var(--panel); border:1.5px solid var(--text);
+  border-radius:var(--radius); padding:12px 18px; min-width:112px; box-shadow:var(--shadow);
+}
+.stat-chip .n{font-size:23px; font-weight:700; color:var(--gold); font-family:'Space Mono';}
+.stat-chip .l{font-size:10.5px; color:var(--text-dim); margin-top:2px; text-transform:uppercase; letter-spacing:.6px; font-weight:700;}
+
+.toolbar{display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap; align-items:center;}
+.toolbar select, .toolbar input{
+  padding:10px 12px; border-radius:3px; border:1.5px solid var(--text);
+  background:var(--panel); color:var(--text); font-family:'Archivo'; font-size:14px;
+}
+.toolbar .btn{width:auto; padding:10px 20px; font-size:14px;}
+.btn.ghost{background:var(--panel); border:1.5px solid var(--gold-dim); color:var(--gold); box-shadow:2px 2px 0 var(--line-strong);}
+.btn.ghost:hover{box-shadow:3px 3px 0 var(--line-strong);}
+.btn.small{width:auto; padding:7px 14px; font-size:13px;}
+.btn.danger{background:var(--red); color:#fff; border-color:var(--text);}
+
+/* ---- Data panel: ledger binder-tab signature ---- */
+.card-panel{
+  position:relative; margin-top:18px;
+  background:var(--panel); border:1.5px solid var(--text);
+  border-radius:0 var(--radius) var(--radius) var(--radius); overflow:visible; box-shadow:var(--shadow);
+}
+.card-panel::before{
+  content:"LEDGER"; position:absolute; top:-22px; left:-1.5px; font-family:'Space Mono',monospace;
+  font-size:9px; font-weight:700; letter-spacing:.14em; color:var(--paper);
+  background:var(--text); padding:5px 10px 4px; border-radius:3px 6px 0 0;
+}
+.card-panel > *{overflow:hidden; border-radius:inherit;}
+table{width:100%; border-collapse:collapse;}
+th, td{padding:12px 14px; text-align:left; border-bottom:1px dashed var(--line-strong); font-size:14px; vertical-align:middle;}
+th{color:var(--text-dim); font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.08em; background:var(--paper-2);}
+tr:last-child td{border-bottom:none;}
+tbody tr:nth-child(even) td{background:rgba(211,203,180,.14);}
+tr:hover td{background:rgba(195,57,43,.05);}
+td.actions{white-space:nowrap; width:1%;}
+td input{
+  width:100%; padding:7px 9px; border-radius:3px; border:1.5px solid var(--line-strong);
+  background:var(--paper); color:var(--text); font-family:'Archivo'; font-size:14px;
+}
+td input:focus{outline:none; border-color:var(--teal);}
+
+/* ---- Status badges: dotted ink stamps ---- */
+.badge{padding:3px 11px 3px 9px; border-radius:20px; font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:5px; letter-spacing:.02em; border:1.5px solid currentColor;}
+.badge::before{content:""; width:6px; height:6px; border-radius:50%; background:currentColor; flex-shrink:0;}
+.badge.pending{background:#fff; color:#8a6a2c;}
+.badge.processing{background:#fff; color:var(--teal);}
+.badge.delivered{background:#fff; color:var(--green);}
+.badge.failed{background:#fff; color:var(--red);}
+.badge.manual{background:#fff; color:#7a5fb3;}
+.badge.paid{background:#fff; color:var(--green);}
+.badge.expired{background:#fff; color:var(--text-dim);}
+.badge.cancelled{background:#fff; color:var(--text-dim);}
+
+.new-row{background:rgba(195,57,43,.06) !important;}
+.empty{color:var(--text-dim); text-align:center; padding:48px 12px; font-size:14px;}
+.empty .ic{font-size:30px; display:block; margin-bottom:10px; opacity:.7;}
+.skeleton{padding:20px;}
+.skeleton .bar{height:14px; border-radius:3px; background:linear-gradient(90deg, var(--paper-2), var(--panel-3), var(--paper-2)); background-size:200% 100%; animation:shimmer 1.2s infinite; margin-bottom:10px; border:1px dashed var(--line-strong);}
+@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+
+.toast{
+  position:fixed; bottom:22px; right:22px; left:auto; background:var(--text); border:1.5px solid var(--text);
+  padding:13px 20px; border-radius:3px; font-size:14px; opacity:0; transform:translateY(8px); color:var(--paper);
+  transition:all .25s; pointer-events:none; box-shadow:3px 3px 0 var(--line-strong); max-width:calc(100vw - 44px); z-index:50;
+  font-weight:600;
+}
+.toast.show{opacity:1; transform:translateY(0);}
+.toast.err{border-color:var(--red); background:var(--red); color:#fff;}
+.toast.ok{border-color:var(--green); background:var(--green); color:#fff;}
+
+.settings-form{max-width:560px; display:flex; flex-direction:column; gap:16px;}
+.settings-form label{font-size:12px; color:var(--text-dim); font-weight:700; display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px;}
+.settings-form input, .settings-form textarea{
+  width:100%; padding:11px 13px; border-radius:3px; border:1.5px solid var(--text);
+  background:var(--panel); color:var(--text); font-family:'Archivo'; font-size:15px;
+}
+.settings-form input:focus, .settings-form textarea:focus{outline:none; border-color:var(--teal);}
+.settings-form textarea{resize:vertical; min-height:60px;}
+
+/* ---- Image upload widget (used for games/products/banners/logo) ---- */
+.img-field{display:flex; align-items:center; gap:8px;}
+.img-field .thumb{
+  width:38px; height:38px; border-radius:3px; object-fit:cover; background:var(--paper-2);
+  border:1.5px solid var(--text); flex-shrink:0;
+}
+.img-field .thumb.empty-thumb{display:flex; align-items:center; justify-content:center; font-size:15px; color:var(--text-dim);}
+.img-field input[type=text]{flex:1; min-width:90px;}
+.img-field .upload-btn{
+  flex-shrink:0; width:34px; height:34px; border-radius:3px; border:1.5px solid var(--gold-dim);
+  background:var(--paper); color:var(--gold); display:flex; align-items:center; justify-content:center;
+  cursor:pointer; font-size:15px; transition:background .15s;
+}
+.img-field .upload-btn:hover{background:var(--paper-2);}
+.img-field .upload-btn.loading{opacity:.5; pointer-events:none;}
+.img-field input[type=file]{display:none;}
+.settings-form .img-field{max-width:340px;}
+.settings-form .img-field .thumb{width:50px; height:50px; border-radius:50%;}
+
+/* ---- Mobile responsive ---- */
+@media (max-width: 900px){
+  .shell{display:block;}
+  nav{
+    position:fixed; top:0; left:0; bottom:0; transform:translateX(-100%);
+    transition:transform .2s ease; box-shadow:var(--shadow);
+  }
+  nav.open{transform:translateX(0);}
+  .topbar{
+    display:flex; align-items:center; gap:12px; padding:14px 16px; background:var(--panel);
+    border-bottom:2px dashed var(--line-strong); position:sticky; top:0; z-index:10;
+  }
+  .topbar .hamburger{
+    width:38px; height:38px; border-radius:3px; border:1.5px solid var(--text); background:var(--paper);
+    color:var(--text); font-size:18px; display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .topbar .title{color:var(--text); font-size:19px; letter-spacing:.6px;}
+  main{padding:22px 16px 90px;}
+  main h1{font-size:22px;}
+  .card-panel{margin-top:24px;}
+  table, thead, tbody, th, tr, td{display:block;}
+  thead{display:none;}
+  .card-panel table tr{
+    border-bottom:1.5px dashed var(--line-strong); padding:12px 14px; display:block;
+  }
+  tbody tr:nth-child(even) td{background:none;}
+  .card-panel table tr:nth-child(even){background:rgba(211,203,180,.14);}
+  .card-panel table tr:last-child{border-bottom:none;}
+  td{border:none; padding:6px 0; background:none !important;}
+  td:before{
+    content:attr(data-label); display:block; font-size:10px; color:var(--text-dim);
+    text-transform:uppercase; letter-spacing:.06em; margin-bottom:3px; font-weight:700;
+  }
+  td.actions{width:auto; display:flex; gap:8px; padding-top:8px;}
+  .toast{left:16px; right:16px; bottom:16px; max-width:none;}
+}
+@media (min-width: 901px){
+  .topbar{display:none;}
+}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="card">
+    <div class="logo-badge">🎁</div>
+    <div class="brand khmer">SANTA TOPUP</div>
+    <p>Admin Panel</p>
+    <input id="pwInput" type="password" placeholder="Admin password" />
+    <button onclick="login()">ចូល / Login</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="shell">
+    <div class="overlay" id="navOverlay" onclick="closeNav()"></div>
+    <nav id="sideNav">
+      <div class="logo khmer"><span class="badge">🎁</span><span>SANTA TOPUP<small>ADMIN PANEL</small></span></div>
+      <button data-tab="games" class="active" onclick="switchTab('games')">🎮 Games</button>
+      <button data-tab="products" onclick="switchTab('products')">💠 Products</button>
+      <button data-tab="banners" onclick="switchTab('banners')">🖼️ Banners</button>
+      <button data-tab="khmertopup" onclick="switchTab('khmertopup')">🔌 Khmer TopUp</button>
+      <button data-tab="transactions" onclick="switchTab('transactions')">🧾 Transactions</button>
+      <button data-tab="security" onclick="switchTab('security')">🛡️ Security</button>
+      <button data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</button>
+      <div class="spacer"></div>
+      <button class="logout" onclick="logout()">↩ Logout</button>
+    </nav>
+    <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+      <div class="topbar">
+        <div class="hamburger" onclick="openNav()">☰</div>
+        <div class="title khmer">SANTA TOPUP</div>
+      </div>
+      <main id="main"></main>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = ""; // same origin — calls go to /api/admin-*
+function getToken(){ return localStorage.getItem("pvh_admin_token") || ""; }
+function setToken(t){ localStorage.setItem("pvh_admin_token", t); }
+function clearToken(){ localStorage.removeItem("pvh_admin_token"); }
+
+function openNav(){ document.getElementById("sideNav").classList.add("open"); document.getElementById("navOverlay").classList.add("show"); }
+function closeNav(){ document.getElementById("sideNav").classList.remove("open"); document.getElementById("navOverlay").classList.remove("show"); }
+
+async function api(path, opts = {}) {
+  const res = await fetch(`/api/${path}`, {
+    ...opts,
+    headers: {
+      "Content-Type": "application/json",
+      "x-admin-token": getToken(),
+      ...(opts.headers || {}),
+    },
+  });
+  if (res.status === 401) { logout(); throw new Error("Session expired"); }
+  const data = await res.json();
+  if (!data.success && res.status >= 400) throw new Error(data.error || "Request failed");
+  return data;
+}
+
+// Multipart upload — does NOT set Content-Type manually (browser sets the boundary)
+async function uploadFile(file) {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch("/api/admin-upload", {
+    method: "POST",
+    headers: { "x-admin-token": getToken() },
+    body: form,
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || "Upload failed");
+  return data.url;
+}
+
+function toast(msg, kind = "ok") {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = `toast show ${kind}`;
+  setTimeout(() => (el.className = "toast"), 2500);
+}
+
+async function login() {
+  const pw = document.getElementById("pwInput").value.trim();
+  if (!pw) return;
+  setToken(pw);
+  try {
+    await api("admin-games"); // any admin GET doubles as a password check
+    document.getElementById("gate").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    switchTab("games");
+  } catch (err) {
+    clearToken();
+    document.getElementById("gateErr").textContent = "ពាក្យសម្ងាត់មិនត្រឹមត្រូវ / Wrong password";
+  }
+}
+function logout() {
+  clearToken();
+  document.getElementById("app").style.display = "none";
+  document.getElementById("gate").style.display = "flex";
+  document.getElementById("pwInput").value = "";
+}
+
+let currentTab = "games";
+function switchTab(tab) {
+  currentTab = tab;
+  closeNav();
+  document.querySelectorAll("nav button[data-tab]").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  ({ games: renderGames, products: renderProducts, banners: renderBanners, khmertopup: renderKhmerTopUp, transactions: renderTransactions, security: renderSecurity, settings: renderSettings })[tab]();
+}
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function skeletonRows(n = 3) {
+  return `<div class="skeleton">${Array(n).fill('<div class="bar"></div>').join("")}</div>`;
+}
+
+function emptyState(icon, text) {
+  return `<div class="empty"><span class="ic">${icon}</span>${text}</div>`;
+}
+
+// ---------- Reusable image upload field ----------
+// Renders a thumbnail + text input (still editable/pasteable) + an upload button.
+// `onChangeAttr` is an inline JS string invoked after the URL changes (e.g. to refresh a preview elsewhere).
+let imgFieldSeq = 0;
+function imageField(fieldName, value, placeholder = "https://...") {
+  const uid = `imgf_${++imgFieldSeq}`;
+  const hasVal = value && value.trim();
+  return `
+    <div class="img-field" id="${uid}">
+      ${hasVal
+        ? `<img class="thumb" src="${esc(value)}" onerror="this.outerHTML='<div class=\\'thumb empty-thumb\\'>🖼️</div>'">`
+        : `<div class="thumb empty-thumb">🖼️</div>`}
+      <input type="text" value="${esc(value || "")}" data-f="${fieldName}" placeholder="${placeholder}"
+             oninput="refreshThumb('${uid}', this.value)">
+      <label class="upload-btn" title="Upload image">
+        📤<input type="file" accept="image/*" onchange="handleImgUpload(event, '${uid}')">
+      </label>
+    </div>`;
+}
+function refreshThumb(uid, url) {
+  const wrap = document.getElementById(uid);
+  if (!wrap) return;
+  const old = wrap.querySelector(".thumb");
+  if (url && url.trim()) {
+    const img = new Image();
+    img.className = "thumb";
+    img.src = url;
+    img.onerror = () => { img.outerHTML = '<div class="thumb empty-thumb">🖼️</div>'; };
+    old.replaceWith(img);
+  } else {
+    old.outerHTML = '<div class="thumb empty-thumb">🖼️</div>';
+  }
+}
+async function handleImgUpload(event, uid) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const wrap = document.getElementById(uid);
+  const btn = wrap.querySelector(".upload-btn");
+  const input = wrap.querySelector("input[type=text]");
+  btn.classList.add("loading");
+  try {
+    const url = await uploadFile(file);
+    input.value = url;
+    refreshThumb(uid, url);
+    toast("បានបញ្ចូលរូបភាព");
+  } catch (err) {
+    toast(err.message, "err");
+  } finally {
+    btn.classList.remove("loading");
+    event.target.value = "";
+  }
+}
+
+function readRow(tr) {
+  const out = {};
+  tr.querySelectorAll("input[data-f], select[data-f]").forEach(i => {
+    out[i.dataset.f] = i.type === "checkbox" ? i.checked : i.value;
+  });
+  return out;
+}
+function sectionSelect(value) {
+  const v = value === "recommend" ? "recommend" : "normal";
+  return `<select data-f="section">
+    <option value="normal" ${v === "normal" ? "selected" : ""}>Normal</option>
+    <option value="recommend" ${v === "recommend" ? "selected" : ""}>⭐ Recommend</option>
+  </select>`;
+}
+function bannerTypeSelect(value) {
+  // Frontend filters banners by this field — must be exactly "main_slider" or
+  // "small_promo" (see u.banners.filter(S=>S.type===...) in the site bundle).
+  const v = value === "small_promo" ? "small_promo" : "main_slider";
+  return `<select data-f="type">
+    <option value="main_slider" ${v === "main_slider" ? "selected" : ""}>🎠 Main Slider</option>
+    <option value="small_promo" ${v === "small_promo" ? "selected" : ""}>🏷️ Small Promo</option>
+  </select>`;
+}
+function fulfillmentTypeSelect(value) {
+  // Every game now auto top-ups through the same generic Khmer TopUp flow
+  // (slug + package_id + player_id[+server_id]) — this hidden field just
+  // keeps old rows' data intact, it's no longer shown or edited in the UI.
+  return `<input type="hidden" data-f="fulfillment_type" value="${esc(value || "topup")}">`;
+}
+
+// ---------- KHMER TOPUP CATALOGUE (browse/search live prices, copy slug + package_id) ----------
+let khmertopupCatalogueCache = null;
+async function loadKhmerTopUpCatalogue(force = false) {
+  if (khmertopupCatalogueCache && !force) return khmertopupCatalogueCache;
+  const { games } = await api(`admin-khmertopup-games${force ? "?force=1" : ""}`);
+  khmertopupCatalogueCache = games || [];
+  return khmertopupCatalogueCache;
+}
+function copyToClipboard(text, label) {
+  navigator.clipboard?.writeText(String(text)).then(
+    () => toast(`បានចម្លង ${label}: ${text}`),
+    () => toast("មិនអាចចម្លងបានទេ", "err")
+  );
+}
+// Opens a small picker over the Khmer TopUp catalogue; onPick(game) is called
+// when the admin clicks a game row (used to autofill slug + has_server_id).
+async function pickKhmerTopUpGame(onPick) {
+  const modal = document.createElement("div");
+  modal.setAttribute("style", "position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;");
+  modal.innerHTML = `<div style="background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:520px;width:100%;max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:16px 18px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center">
+      <input id="ktSearchInput" placeholder="ស្វែងរកហ្គេម..." style="flex:1;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel-3);color:var(--text)">
+      <button class="btn small ghost" onclick="this.closest('[data-kt-modal]').remove()">✕</button>
+    </div>
+    <div id="ktListWrap" style="overflow-y:auto;padding:8px"><div class="skeleton"><div class="bar"></div><div class="bar"></div><div class="bar"></div></div></div>
+  </div>`;
+  modal.setAttribute("data-kt-modal", "1");
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+
+  let games = [];
+  try { games = await loadKhmerTopUpCatalogue(); }
+  catch (err) { document.getElementById("ktListWrap").innerHTML = emptyState("⚠️", esc(err.message)); return; }
+
+  function render(filter) {
+    const f = (filter || "").trim().toLowerCase();
+    const shown = f ? games.filter(g => g.name.toLowerCase().includes(f) || g.slug.toLowerCase().includes(f)) : games;
+    document.getElementById("ktListWrap").innerHTML = shown.length
+      ? shown.map(g => `<div style="padding:10px 12px;border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px" onmouseover="this.style.background='var(--panel-2)'" onmouseout="this.style.background=''" data-slug="${esc(g.slug)}">
+          <div><div style="font-weight:600">${esc(g.name)}</div><div class="mono" style="font-size:11px;color:var(--text-dim)">${esc(g.slug)} · ${g.packages?.length || 0} packages${g.server_label ? ` · needs ${esc(g.server_label)}` : ""}</div></div>
+          <button class="btn small ghost">ជ្រើស</button>
+        </div>`).join("")
+      : emptyState("🔍", "គ្មានលទ្ធផលទេ");
+    document.querySelectorAll("#ktListWrap [data-slug]").forEach(row => {
+      row.addEventListener("click", () => {
+        const g = games.find(x => x.slug === row.dataset.slug);
+        modal.remove();
+        onPick(g);
+      });
+    });
+  }
+  render("");
+  document.getElementById("ktSearchInput").addEventListener("input", e => render(e.target.value));
+}
+// Package picker for a single already-chosen game slug (used from the Products tab).
+async function pickKhmerTopUpPackage(slug, onPick) {
+  let games = [];
+  try { games = await loadKhmerTopUpCatalogue(); }
+  catch (err) { toast(err.message, "err"); return; }
+  const game = games.find(g => g.slug === slug);
+  if (!game) { toast("Slug នេះមិនមានក្នុង catalogue ទេ — ចុច Browse ជ្រើសហ្គេមសិន", "err"); return; }
+  const modal = document.createElement("div");
+  modal.setAttribute("style", "position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;");
+  modal.setAttribute("data-kt-modal", "1");
+  modal.innerHTML = `<div style="background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:460px;width:100%;max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+      <div style="font-weight:600">${esc(game.name)} — packages</div>
+      <button class="btn small ghost" onclick="this.closest('[data-kt-modal]').remove()">✕</button>
+    </div>
+    <div style="overflow-y:auto;padding:8px">${(game.packages || []).map(p => `
+      <div style="padding:10px 12px;border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px" onmouseover="this.style.background='var(--panel-2)'" onmouseout="this.style.background=''" data-pkg="${p.package_id}">
+        <div>${esc(p.name)}${p.tag ? ` <span class="badge processing">${esc(p.tag)}</span>` : ""}</div>
+        <div class="mono">$${Number(p.price).toFixed(2)}</div>
+      </div>`).join("") || emptyState("💠", "គ្មាន package ទេ")}</div>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+  modal.querySelectorAll("[data-pkg]").forEach(row => {
+    row.addEventListener("click", () => {
+      const pkg = (game.packages || []).find(p => String(p.package_id) === row.dataset.pkg);
+      modal.remove();
+      onPick(pkg);
+    });
+  });
+}
+
+// ---------- GAMES ----------
+async function renderGames() {
+  const main = document.getElementById("main");
+  main.innerHTML = `<h1 class="khmer">🎮 Games</h1><p class="sub">ហ្គេមទាំងអស់ដែលបង្ហាញលើគេហទំព័រ</p>
+    <div class="stats-row" id="gamesStats"></div>
+    <div class="toolbar"><button class="btn" style="width:auto;padding:10px 20px" onclick="addGameRow()">+ បន្ថែមហ្គេមថ្មី</button></div>
+    <div class="card-panel" id="gamesTableWrap">${skeletonRows()}</div>`;
+  await loadGames();
+}
+let gamesCache = [];
+async function loadGames() {
+  const wrap = document.getElementById("gamesTableWrap");
+  try {
+    const { games } = await api("admin-games");
+    gamesCache = games;
+    document.getElementById("gamesStats").innerHTML = `<div class="stat-chip"><div class="n">${games.length}</div><div class="l">Total games</div></div>`;
+    wrap.innerHTML = !games.length ? emptyState("🎮", 'មិនទាន់មានហ្គេមទេ — ចុច "+ បន្ថែមហ្គេមថ្មី" ខាងលើ') : `<table><thead><tr><th>Image</th><th>Name</th><th>Code</th><th>Zone ID?</th><th>Khmer TopUp Slug</th><th></th></tr></thead>
+      <tbody>${games.map(g => `
+        <tr data-id="${g.id}">
+          <td data-label="Image">${imageField("image_url", g.image_url)}</td>
+          <td data-label="Name"><input value="${esc(g.name || "")}" data-f="name"></td>
+          <td data-label="Code"><input value="${esc(g.code || "")}" data-f="code"></td>
+          <td data-label="Zone ID?"><input type="checkbox" data-f="has_server_id" ${g.has_server_id ? "checked" : ""} style="width:18px;height:18px"></td>
+          <td data-label="Khmer TopUp Slug">
+            <div style="display:flex;gap:6px">
+              <input value="${esc(g.khmertopup_slug || "")}" data-f="khmertopup_slug" placeholder="mobile-legends">
+              <button class="btn small ghost" style="flex-shrink:0" onclick="browseSlugForRow(this)">🔍</button>
+            </div>
+            ${fulfillmentTypeSelect(g.fulfillment_type)}
+          </td>
+          <td class="actions">
+            <button class="btn small ghost" onclick="saveGame(${g.id})">Save</button>
+            <button class="btn small danger" onclick="deleteGame(${g.id})">Delete</button>
+          </td>
+        </tr>`).join("")}
+      </tbody></table>`;
+  } catch (err) { wrap.innerHTML = emptyState("⚠️", esc(err.message)); }
+}
+// Opens the catalogue picker for whichever row's 🔍 button was clicked, and
+// autofills that row's slug + Zone ID checkbox from the picked game.
+function browseSlugForRow(btn) {
+  const tr = btn.closest("tr");
+  pickKhmerTopUpGame(g => {
+    tr.querySelector('input[data-f="khmertopup_slug"]').value = g.slug;
+    tr.querySelector('input[data-f="has_server_id"]').checked = !!g.server_label;
+    toast(`បានជ្រើស ${g.name} (${g.slug})`);
+  });
+}
+function addGameRow() {
+  const wrap = document.getElementById("gamesTableWrap");
+  let table = wrap.querySelector("tbody");
+  if (!table) { renderGames(); return; }
+  const tr = document.createElement("tr");
+  tr.className = "new-row";
+  tr.innerHTML = `<td data-label="Image">${imageField("image_url", "")}</td>
+    <td data-label="Name"><input placeholder="Mobile Legends" data-f="name"></td>
+    <td data-label="Code"><input placeholder="ml" data-f="code"></td>
+    <td data-label="Zone ID?"><input type="checkbox" data-f="has_server_id" style="width:18px;height:18px"></td>
+    <td data-label="Khmer TopUp Slug">
+      <div style="display:flex;gap:6px">
+        <input placeholder="mobile-legends" data-f="khmertopup_slug">
+        <button class="btn small ghost" style="flex-shrink:0" onclick="browseSlugForRow(this)">🔍</button>
+      </div>
+      ${fulfillmentTypeSelect("topup")}
+    </td>
+    <td class="actions"><button class="btn small" onclick="createGame(this)">Create</button></td>`;
+  table.prepend(tr);
+}
+async function createGame(btn) {
+  const body = readRow(btn.closest("tr"));
+  try { await api("admin-games", { method: "POST", body: JSON.stringify(body) }); toast("បានបន្ថែម"); loadGames(); }
+  catch (err) { toast(err.message, "err"); }
+}
+async function saveGame(id) {
+  const body = { id, ...readRow(document.querySelector(`tr[data-id="${id}"]`)) };
+  try { await api("admin-games", { method: "PUT", body: JSON.stringify(body) }); toast("បានរក្សាទុក"); }
+  catch (err) { toast(err.message, "err"); }
+}
+async function deleteGame(id) {
+  if (!confirm("លុបហ្គេមនេះ?")) return;
+  try { await api(`admin-games?id=${id}`, { method: "DELETE" }); toast("បានលុប"); loadGames(); }
+  catch (err) { toast(err.message, "err"); }
+}
+
+// ---------- PRODUCTS ----------
+async function renderProducts() {
+  const main = document.getElementById("main");
+  main.innerHTML = `<h1 class="khmer">💠 Products</h1>
+    <p class="sub">Cost = តម្លៃដើម Khmer TopUp reseller (មិនបង្ហាញអតិថិជន) — Price = តម្លៃលក់</p>
+    <div class="stats-row" id="productsStats"></div>
+    <div class="toolbar">
+      <select id="filterGame" onchange="loadProducts()"><option value="">-- ហ្គេមទាំងអស់ --</option></select>
+      <input id="markupPct" type="number" placeholder="Markup %" style="width:110px" value="20">
+      <button class="btn ghost" style="width:auto;padding:10px 18px" onclick="applyMarkupToAll()">💰 Apply markup to empty prices</button>
+      <button class="btn" style="width:auto;padding:10px 20px" onclick="addProductRow()">+ បន្ថែម Product ថ្មី</button>
+    </div>
+    <div class="card-panel" id="productsTableWrap">${skeletonRows()}</div>`;
+  try {
+    const { games } = await api("admin-games");
+    productsGamesCache = games;
+    const sel = document.getElementById("filterGame");
+    games.forEach(g => sel.insertAdjacentHTML("beforeend", `<option value="${esc(g.code)}">${esc(g.name)}</option>`));
+  } catch {}
+  await loadProducts();
+}
+let productsGamesCache = [];
+function marginBadge(cost, price) {
+  const c = parseFloat(cost), p = parseFloat(price);
+  if (!isFinite(c) || !isFinite(p) || c <= 0) return `<span style="color:var(--text-dim);font-size:12px">—</span>`;
+  const profit = p - c;
+  const pct = (profit / c) * 100;
+  const color = profit <= 0 ? "var(--red)" : pct < 10 ? "var(--gold-soft)" : "var(--green)";
+  const sign = profit > 0 ? "+" : "";
+  return `<span style="color:${color};font-weight:700;font-size:13px">${sign}$${profit.toFixed(2)}</span>
+    <div style="color:${color};font-size:11px">${sign}${pct.toFixed(0)}%</div>`;
+}
+function updateMarginCell(tr) {
+  const cost = tr.querySelector('input[data-f="cost_usd"]').value;
+  const price = tr.querySelector('input[data-f="price"]').value;
+  tr.querySelector(".margin-cell").innerHTML = marginBadge(cost, price);
+}
+async function applyMarkupToAll() {
+  const pct = parseFloat(document.getElementById("markupPct").value);
+  if (!isFinite(pct)) { toast("សូមវាយ markup % ជាលេខ", "err"); return; }
+  const rows = document.querySelectorAll("#productsTableWrap tbody tr[data-id]");
+  let updated = 0;
+  for (const tr of rows) {
+    const priceInput = tr.querySelector('input[data-f="price"]');
+    const costInput = tr.querySelector('input[data-f="cost_usd"]');
+    const cost = parseFloat(costInput.value);
+    if (isFinite(cost) && cost > 0 && (!priceInput.value || parseFloat(priceInput.value) <= 0)) {
+      const newPrice = (cost * (1 + pct / 100)).toFixed(2);
+      priceInput.value = newPrice;
+      updateMarginCell(tr);
+      try {
+        await api("admin-products", { method: "PUT", body: JSON.stringify({ id: tr.dataset.id, price: newPrice }) });
+        updated++;
+      } catch (err) { toast(err.message, "err"); }
+    }
+  }
+  toast(updated ? `បានកំណត់តម្លៃ ${updated} product (markup ${pct}%)` : "គ្មាន product ណាទទេត្រូវបំពេញទេ (Price ត្រូវទទេ ហើយ Cost ត្រូវបំពេញ)");
+}
+async function loadProducts() {
+  const wrap = document.getElementById("productsTableWrap");
+  const gameCode = document.getElementById("filterGame")?.value || "";
+  try {
+    const { products } = await api(`admin-products${gameCode ? `?game_code=${encodeURIComponent(gameCode)}` : ""}`);
+    const avgMargin = products.filter(p => p.cost_usd > 0 && p.price > 0)
+      .map(p => ((p.price - p.cost_usd) / p.cost_usd) * 100);
+    const avgTxt = avgMargin.length ? `${(avgMargin.reduce((a, b) => a + b, 0) / avgMargin.length).toFixed(0)}%` : "—";
+    document.getElementById("productsStats").innerHTML = `
+      <div class="stat-chip"><div class="n">${products.length}</div><div class="l">Products shown</div></div>
+      <div class="stat-chip"><div class="n">${avgTxt}</div><div class="l">Avg margin</div></div>`;
+    wrap.innerHTML = !products.length ? emptyState("💠", 'មិនទាន់មាន product ទេ — ចុច "+ បន្ថែម Product ថ្មី" ខាងលើ') : `<table><thead><tr><th>Image</th><th>Game code</th><th>Name</th><th>Cost ($)</th><th>Price ($)</th><th>Margin</th><th>Khmer TopUp Package ID</th><th>Section</th><th></th></tr></thead>
+      <tbody>${products.map(p => `
+        <tr data-id="${p.id}">
+          <td data-label="Image">${imageField("image_url", p.image_url)}</td>
+          <td data-label="Game code"><input value="${esc(p.game_code || "")}" data-f="game_code"></td>
+          <td data-label="Name"><input value="${esc(p.name || "")}" data-f="name"></td>
+          <td data-label="Cost"><input value="${p.cost_usd ?? ""}" data-f="cost_usd" placeholder="0.74" oninput="updateMarginCell(this.closest('tr'))"></td>
+          <td data-label="Price"><input value="${p.price ?? ""}" data-f="price" oninput="updateMarginCell(this.closest('tr'))"></td>
+          <td data-label="Margin" class="margin-cell">${marginBadge(p.cost_usd, p.price)}</td>
+          <td data-label="Khmer TopUp Package ID">
+            <div style="display:flex;gap:6px">
+              <input value="${esc(p.provider_package || "")}" data-f="provider_package" placeholder="268">
+              <button class="btn small ghost" style="flex-shrink:0" onclick="browsePackageForRow(this)">🔍</button>
+            </div>
+          </td>
+          <td data-label="Section">${sectionSelect(p.section)}</td>
+          <td class="actions">
+            <button class="btn small ghost" onclick="saveProduct(${p.id})">Save</button>
+            <button class="btn small danger" onclick="deleteProduct(${p.id})">Delete</button>
+          </td>
+        </tr>`).join("")}
+      </tbody></table>`;
+  } catch (err) { wrap.innerHTML = emptyState("⚠️", esc(err.message)); }
+}
+// Looks up the row's game_code -> khmertopup_slug (from the games loaded when
+// this tab opened), opens the package picker, and autofills package_id + cost.
+function browsePackageForRow(btn) {
+  const tr = btn.closest("tr");
+  const gameCode = tr.querySelector('input[data-f="game_code"]').value.trim();
+  const game = productsGamesCache.find(g => g.code === gameCode);
+  if (!game || !game.khmertopup_slug) {
+    toast("ហ្គេមនេះមិនទាន់មាន Khmer TopUp Slug ទេ — ចូរកំណត់វានៅ Games tab សិន", "err");
+    return;
+  }
+  pickKhmerTopUpPackage(game.khmertopup_slug, pkg => {
+    tr.querySelector('input[data-f="provider_package"]').value = pkg.package_id;
+    const costInput = tr.querySelector('input[data-f="cost_usd"]');
+    if (!costInput.value) { costInput.value = pkg.price; updateMarginCell(tr); }
+    const nameInput = tr.querySelector('input[data-f="name"]');
+    if (!nameInput.value) nameInput.value = pkg.name;
+    toast(`បានជ្រើស ${pkg.name} (package_id: ${pkg.package_id})`);
+  });
+}
+function addProductRow() {
+  const wrap = document.getElementById("productsTableWrap");
+  let table = wrap.querySelector("tbody");
+  if (!table) { renderProducts(); return; }
+  const tr = document.createElement("tr");
+  tr.className = "new-row";
+  tr.innerHTML = `<td data-label="Image">${imageField("image_url", "")}</td>
+    <td data-label="Game code"><input placeholder="ml" data-f="game_code"></td>
+    <td data-label="Name"><input placeholder="500 Diamonds" data-f="name"></td>
+    <td data-label="Cost"><input placeholder="0.74" data-f="cost_usd" oninput="updateMarginCell(this.closest('tr'))"></td>
+    <td data-label="Price"><input placeholder="0.90" data-f="price" oninput="updateMarginCell(this.closest('tr'))"></td>
+    <td data-label="Margin" class="margin-cell">${marginBadge("", "")}</td>
+    <td data-label="Khmer TopUp Package ID">
+      <div style="display:flex;gap:6px">
+        <input placeholder="268" data-f="provider_package">
+        <button class="btn small ghost" style="flex-shrink:0" onclick="browsePackageForRow(this)">🔍</button>
+      </div>
+    </td>
+    <td data-label="Section">${sectionSelect("normal")}</td>
+    <td class="actions"><button class="btn small" onclick="createProduct(this)">Create</button></td>`;
+  table.prepend(tr);
+}
+async function createProduct(btn) {
+  const body = readRow(btn.closest("tr"));
+  try { await api("admin-products", { method: "POST", body: JSON.stringify(body) }); toast("បានបន្ថែម"); loadProducts(); }
+  catch (err) { toast(err.message, "err"); }
+}
+async function saveProduct(id) {
+  const body = { id, ...readRow(document.querySelector(`#productsTableWrap tr[data-id="${id}"]`)) };
+  try { await api("admin-products", { method: "PUT", body: JSON.stringify(body) }); toast("បានរក្សាទុក"); }
+  catch (err) { toast(err.message, "err"); }
+}
+async function deleteProduct(id) {
+  if (!confirm("លុប product នេះ?")) return;
+  try { await api(`admin-products?id=${id}`, { method: "DELETE" }); toast("បានលុប"); loadProducts(); }
+  catch (err) { toast(err.message, "err"); }
+}
+
+// ---------- BANNERS ----------
+async function renderBanners() {
+  const main = document.getElementById("main");
+  main.innerHTML = `<h1 class="khmer">🖼️ Banners</h1><p class="sub">រូបភាព banner លើទំព័រដើម</p>
+    <div class="stats-row" id="bannersStats"></div>
+    <div class="toolbar"><button class="btn" style="width:auto;padding:10px 20px" onclick="addBannerRow()">+ បន្ថែម Banner ថ្មី</button></div>
+    <div class="card-panel" id="bannersTableWrap">${skeletonRows()}</div>`;
+  await loadBanners();
+}
+async function loadBanners() {
+  const wrap = document.getElementById("bannersTableWrap");
+  try {
+    const { banners } = await api("admin-banners");
+    document.getElementById("bannersStats").innerHTML = `<div class="stat-chip"><div class="n">${banners.length}</div><div class="l">Total banners</div></div>`;
+    wrap.innerHTML = !banners.length ? emptyState("🖼️", 'មិនទាន់មាន banner ទេ — ចុច "+ បន្ថែម Banner ថ្មី" ខាងលើ') : `<table><thead><tr><th>Image</th><th>Type</th><th>Link</th><th></th></tr></thead>
+      <tbody>${banners.map(b => `
+        <tr data-id="${b.id}">
+          <td data-label="Image">${imageField("image_url", b.image_url)}</td>
+          <td data-label="Type">${bannerTypeSelect(b.type)}</td>
+          <td data-label="Link"><input value="${esc(b.link || "")}" data-f="link" placeholder="https://... (optional)"></td>
+          <td class="actions">
+            <button class="btn small ghost" onclick="saveBanner(${b.id})">Save</button>
+            <button class="btn small danger" onclick="deleteBanner(${b.id})">Delete</button>
+          </td>
+        </tr>`).join("")}
+      </tbody></table>`;
+  } catch (err) { wrap.innerHTML = emptyState("⚠️", esc(err.message)); }
+}
+function addBannerRow() {
+  const wrap = document.getElementById("bannersTableWrap");
+  let table = wrap.querySelector("tbody");
+  if (!table) {
+    // No banners yet — the wrap only has the empty-state message and no <table> to
+    // attach a row to. Build the table shell first, then fall through to add the row.
+    wrap.innerHTML = `<table><thead><tr><th>Image</th><th>Type</th><th>Link</th><th></th></tr></thead><tbody></tbody></table>`;
+    table = wrap.querySelector("tbody");
+  }
+  const tr = document.createElement("tr");
+  tr.className = "new-row";
+  tr.innerHTML = `<td data-label="Image">${imageField("image_url", "")}</td>
+    <td data-label="Type">${bannerTypeSelect("main_slider")}</td>
+    <td data-label="Link"><input placeholder="https://... (optional)" data-f="link"></td>
+    <td class="actions"><button class="btn small" onclick="createBanner(this)">Create</button></td>`;
+  table.prepend(tr);
+}
+async function createBanner(btn) {
+  const body = readRow(btn.closest("tr"));
+  try { await api("admin-banners", { method: "POST", body: JSON.stringify(body) }); toast("បានបន្ថែម"); loadBanners(); }
+  catch (err) { toast(err.message, "err"); }
+}
+async function saveBanner(id) {
+  const body = { id, ...readRow(document.querySelector(`tr[data-id="${id}"]`)) };
+  try { await api("admin-banners", { method: "PUT", body: JSON.stringify(body) }); toast("បានរក្សាទុក"); }
+  catch (err) { toast(err.message, "err"); }
+}
+async function deleteBanner(id) {
+  if (!confirm("លុប banner នេះ?")) return;
+  try { await api(`admin-banners?id=${id}`, { method: "DELETE" }); toast("បានលុប"); loadBanners(); }
+  catch (err) { toast(err.message, "err"); }
+}
+
+// ---------- KHMER TOPUP (live catalogue + wallet balance) ----------
+async function renderKhmerTopUp() {
+  const main = document.getElementById("main");
+  main.innerHTML = `<h1 class="khmer">🔌 Khmer TopUp</h1>
+    <p class="sub">Catalogue ផ្ទាល់ពី khmer-topup.com — ចម្លង Slug/Package ID យកទៅដាក់ក្នុង Games/Products</p>
+    <div class="stats-row" id="ktStats"></div>
+    <div class="toolbar">
+      <input id="ktSearch" placeholder="ស្វែងរកហ្គេម..." oninput="renderKtTable()" style="min-width:220px">
+      <button class="btn ghost" style="width:auto;padding:10px 18px" onclick="refreshKhmerTopUp()">↻ Refresh (force)</button>
+    </div>
+    <div class="card-panel" id="ktTableWrap">${skeletonRows()}</div>`;
+  await loadKhmerTopUpTab();
+}
+let ktGamesForTab = [];
+async function loadKhmerTopUpTab(force = false) {
+  document.getElementById("ktStats").innerHTML = `<div class="skeleton" style="padding:0"><div class="bar" style="width:160px"></div></div>`;
+  try {
+    const bal = await api("admin-khmertopup-balance");
+    document.getElementById("ktStats").innerHTML = `
+      <div class="stat-chip"><div class="n">$${Number(bal.balance ?? 0).toFixed(2)}</div><div class="l">Wallet balance (${esc(bal.role || "")})</div></div>`;
+  } catch (err) {
+    document.getElementById("ktStats").innerHTML = `<div class="stat-chip"><div class="n" style="color:var(--red);font-size:14px">⚠️ ${esc(err.message)}</div><div class="l">Wallet balance</div></div>`;
+  }
+  try {
+    ktGamesForTab = await loadKhmerTopUpCatalogue(force);
+    renderKtTable();
+  } catch (err) {
+    document.getElementById("ktTableWrap").innerHTML = emptyState("⚠️", esc(err.message));
+  }
+}
+async function refreshKhmerTopUp() {
+  khmertopupCatalogueCache = null;
+  await loadKhmerTopUpTab(true);
+  toast("បានទាញ catalogue ថ្មី");
+}
+function renderKtTable() {
+  const wrap = document.getElementById("ktTableWrap");
+  const filter = (document.getElementById("ktSearch")?.value || "").trim().toLowerCase();
+  const shown = filter ? ktGamesForTab.filter(g => g.name.toLowerCase().includes(filter) || g.slug.toLowerCase().includes(filter)) : ktGamesForTab;
+  if (!shown.length) { wrap.innerHTML = emptyState("🔌", "គ្មានលទ្ធផលទេ"); return; }
+  wrap.innerHTML = shown.map(g => `
+    <details style="border-bottom:1px solid var(--line)">
+      <summary style="padding:14px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;list-style:none">
+        <div><strong>${esc(g.name)}</strong> <span class="mono" style="font-size:12px;color:var(--text-dim)">${esc(g.slug)}</span>${g.server_label ? ` <span class="badge processing">needs ${esc(g.server_label)}</span>` : ""}</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="mono" style="font-size:12px;color:var(--text-dim)">${g.packages?.length || 0} packages</span>
+          <button class="btn small ghost" onclick="event.preventDefault();copyToClipboard('${esc(g.slug)}','slug')">Copy slug</button>
+        </div>
+      </summary>
+      <table style="margin:0 0 6px"><tbody>${(g.packages || []).map(p => `
+        <tr>
+          <td style="padding-left:16px">${esc(p.name)}${p.tag ? ` <span class="badge processing">${esc(p.tag)}</span>` : ""}</td>
+          <td class="mono">$${Number(p.price).toFixed(2)}</td>
+          <td class="mono">package_id: ${p.package_id}</td>
+          <td class="actions"><button class="btn small ghost" onclick="copyToClipboard('${p.package_id}','package_id')">Copy ID</button></td>
+        </tr>`).join("")}</tbody></table>
+    </details>`).join("");
+}
+
+// ---------- TRANSACTIONS ----------
+async function renderTransactions() {
+  const main = document.getElementById("main");
+  main.innerHTML = `<h1 class="khmer">🧾 Transactions</h1><p class="sub">ការបញ្ជាទិញថ្មីៗ + delivery status (auto top-up តាម Khmer TopUp)</p>
+    <div class="stats-row" id="txStats"></div>
+    <div class="toolbar">
+      <select id="filterStatus" onchange="loadTransactions()">
+        <option value="">-- Payment status ទាំងអស់ --</option>
+        <option value="pending">pending</option>
+        <option value="paid">paid</option>
+        <option value="expired">expired</option>
+      </select>
+      <button class="btn" style="width:auto;padding:10px 20px" onclick="loadTransactions()">↻ Refresh</button>
+    </div>
+    <div class="card-panel" id="txTableWrap">${skeletonRows()}</div>`;
+  await loadTransactions();
+}
+async function loadTransactions() {
+  const wrap = document.getElementById("txTableWrap");
+  const status = document.getElementById("filterStatus")?.value || "";
+  try {
+    const { transactions } = await api(`admin-transactions${status ? `?status=${status}` : ""}`);
+    document.getElementById("txStats").innerHTML = `<div class="stat-chip"><div class="n">${transactions.length}</div><div class="l">Shown</div></div>`;
+    if (!transactions.length) { wrap.innerHTML = emptyState("🧾", "មិនទាន់មានប្រតិបត្តិការទេ"); return; }
+    wrap.innerHTML = `<table><thead><tr>
+        <th>Trx ID</th><th>Game</th><th>User</th><th>Amount</th><th>Status</th><th>Delivery</th><th>Created</th><th></th>
+      </tr></thead><tbody>${transactions.map(t => `
+        <tr>
+          <td data-label="Trx ID" class="mono" title="${esc(t.reference || "")}">${esc(t.trx_id)}</td>
+          <td data-label="Game">${esc(t.game_code || "")}</td>
+          <td data-label="User">${esc(t.user_id || "")}${t.zone_id ? ` (${esc(t.zone_id)})` : ""}</td>
+          <td data-label="Amount" class="mono">$${t.amount ?? "-"}</td>
+          <td data-label="Status"><span class="badge ${esc(t.status)}">${esc(t.status)}</span></td>
+          <td data-label="Delivery">
+            <span class="badge ${esc(t.delivery_status || "pending")}">${esc(t.delivery_status || "pending")}</span>
+            ${t.delivery_error ? `<div style="color:var(--red);font-size:11px;margin-top:4px;max-width:220px">${esc(t.delivery_error)}</div>` : ""}
+          </td>
+          <td data-label="Created" class="mono" style="font-size:12px">${t.created_at ? new Date(t.created_at).toLocaleString() : ""}</td>
+          <td class="actions">
+            ${t.delivery_status !== "delivered" ? `<button class="btn small ghost" onclick="markDelivered('${esc(t.trx_id)}')">Mark delivered</button>` : ""}
+          </td>
+        </tr>`).join("")}
+      </tbody></table>`;
+  } catch (err) { wrap.innerHTML = emptyState("⚠️", esc(err.message)); }
+}
+async function markDelivered(trxId) {
+  try {
+    await api("admin-transactions", { method: "PATCH", body: JSON.stringify({ trx_id: trxId, delivery_status: "delivered" }) });
+    toast("បានកត់ត្រាថាបានប្រគល់ diamond ស្រេច");
+    loadTransactions();
+  } catch (err) { toast(err.message, "err"); }
+}
+
+// ---------- SECURITY ----------
+async function renderSecurity() {
+  const main = document.getElementById("main");
+  main.innerHTML = `<h1 class="khmer">🛡️ Security</h1><p class="sub">IP ដែលកំពុងត្រូវ ban ឬកំពុងប្រមូល strike — ទិន្នន័យនេះនៅក្នុង RAM ប៉ុណ្ណោះ ចាប់ផ្ដើមទទេរាល់ដង server restart/redeploy (មិនមែនប្រវត្តិអចិន្ត្រៃយ៍ទេ)</p>
+    <div class="stats-row" id="secStats"></div>
+    <div class="toolbar">
+      <button class="btn" style="width:auto;padding:10px 20px" onclick="loadSecurityLog()">↻ Refresh</button>
+    </div>
+    <div class="card-panel" id="secTableWrap">${skeletonRows()}</div>`;
+  await loadSecurityLog();
+}
+function fmtSecondsLeft(s) {
+  if (s <= 0) return "-";
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.ceil(s / 60)}m`;
+  return `${Math.ceil(s / 3600)}h`;
+}
+async function loadSecurityLog() {
+  const wrap = document.getElementById("secTableWrap");
+  try {
+    const { rows, limiter_enabled } = await api("admin-security-log");
+    if (limiter_enabled === false) {
+      wrap.innerHTML = emptyState("⚠️", "Flask-Limiter មិនទាន់ដំឡើងលើ server ទេ — គ្មាន rate-limit ការពារសោះ");
+      return;
+    }
+    const bannedNow = rows.filter(r => r.banned_now).length;
+    document.getElementById("secStats").innerHTML = `
+      <div class="stat-chip"><div class="n">${rows.length}</div><div class="l">IP មាន strike</div></div>
+      <div class="stat-chip"><div class="n" style="color:var(--red)">${bannedNow}</div><div class="l">កំពុង Ban ឥឡូវនេះ</div></div>`;
+    if (!rows.length) { wrap.innerHTML = emptyState("🛡️", "គ្មាន IP ណាមួយប្រព្រឹត្តខុសទេ តាំងពី server ចាប់ផ្តើមចុងក្រោយ"); return; }
+    wrap.innerHTML = `<table><thead><tr>
+        <th>IP</th><th>Strikes</th><th>Status</th><th>នៅសល់</th><th>ចុងក្រោយ</th>
+      </tr></thead><tbody>${rows.map(r => `
+        <tr class="${r.banned_now ? "new-row" : ""}">
+          <td data-label="IP" class="mono">${esc(r.ip)}</td>
+          <td data-label="Strikes" class="mono">${r.strikes}</td>
+          <td data-label="Status"><span class="badge ${r.banned_now ? "failed" : "expired"}">${r.banned_now ? "BANNED" : "clear"}</span></td>
+          <td data-label="នៅសល់" class="mono">${r.banned_now ? fmtSecondsLeft(r.banned_seconds_left) : "-"}</td>
+          <td data-label="ចុងក្រោយ" class="mono" style="font-size:12px">${r.last_violation ? new Date(r.last_violation * 1000).toLocaleString() : ""}</td>
+        </tr>`).join("")}
+      </tbody></table>`;
+  } catch (err) { wrap.innerHTML = emptyState("⚠️", esc(err.message)); }
+}
+
+// ---------- SETTINGS ----------
+async function renderSettings() {
+  const main = document.getElementById("main");
+  main.innerHTML = `<h1 class="khmer">⚙️ Settings</h1>
+    <p class="sub">Logo, Facebook, Telegram, TikTok — កែហើយចុច Save លទ្ធផលនឹងបង្ហាញលើគេហទំព័រភ្លាមៗ (មិនចាំបាច់ deploy ថ្មី)</p>
+    <div class="card-panel" style="padding:24px" id="settingsWrap">${skeletonRows(5)}</div>`;
+  try {
+    const { settings } = await api("admin-settings");
+    const s = settings || {};
+    document.getElementById("settingsWrap").innerHTML = `
+      <div class="settings-form">
+        <div>
+          <label>Logo (រូបភាព round icon លើ header)</label>
+          ${imageField("logo_url", s.logo_url, "https://...")}
+        </div>
+        <div>
+          <label>KHQR Logo (សម្រាប់ badge "យើងទទួលទូទាត់" — Download ពី bakong.nbc.gov.kh ផ្លូវការតែប៉ុណ្ណោះ)</label>
+          ${imageField("khqr_logo_url", s.khqr_logo_url, "https://...")}
+        </div>
+        <div>
+          <label>ABA Logo (សម្រាប់ badge "យើងទទួលទូទាត់" — Download ពី ABA merchant portal ផ្លូវការតែប៉ុណ្ណោះ)</label>
+          ${imageField("aba_logo_url", s.aba_logo_url, "https://...")}
+        </div>
+        <div>
+          <label>Site Name</label>
+          <input id="s_site_name" value="${esc(s.site_name || "")}" placeholder="SANTA TOPUP">
+        </div>
+        <div>
+          <label>Footer Name</label>
+          <input id="s_footer_name" value="${esc(s.footer_name || "")}" placeholder="SANTA TOPUP">
+        </div>
+        <div>
+          <label>Telegram Link (សម្រាប់ Contact Admin)</label>
+          <input id="s_tg_link" value="${esc(s.admin_telegram_link || "")}" placeholder="https://t.me/smos_sne1">
+        </div>
+        <div>
+          <label>Telegram Display Name</label>
+          <input id="s_tg_name" value="${esc(s.admin_telegram_name || "")}" placeholder="@smos_sne1">
+        </div>
+        <div>
+          <label>Facebook Page Link</label>
+          <input id="s_fb_link" value="${esc(s.facebook_link || "")}" placeholder="https://www.facebook.com/yourpage">
+        </div>
+        <div>
+          <label>TikTok Link</label>
+          <input id="s_tt_link" value="${esc(s.tiktok_link || "")}" placeholder="https://www.tiktok.com/@yourhandle">
+        </div>
+        <div>
+          <label>Footer Description</label>
+          <textarea id="s_footer_desc" placeholder="សេវាកម្មបញ្ចូលលុយហ្គេម...">${esc(s.footer_desc || "")}</textarea>
+        </div>
+        <div>
+          <label>Copyright Text</label>
+          <input id="s_copyright" value="${esc(s.copyright || "")}" placeholder="© 2026 SANTA TOPUP. All rights reserved.">
+        </div>
+        <button class="btn" style="width:auto;padding:12px 26px" onclick="saveSettings()">💾 Save Settings</button>
+
+        <div style="margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.1)">
+          <label>🔔 Telegram Notifications</label>
+          <p class="sub" style="margin:4px 0 12px">តេស្តថាតើ TELEGRAM_BOT_TOKEN និង ADMIN_CHAT_ID ត្រូវបានកំណត់ត្រឹមត្រូវឬអត់ — ចុចប៊ូតុងខាងក្រោមដើម្បីផ្ញើសារតេស្ត</p>
+          <button class="btn" id="testNotifyBtn" style="width:auto;padding:12px 26px" onclick="testNotify()">📨 Test Notification</button>
+        </div>
+      </div>`;
+  } catch (err) {
+    document.getElementById("settingsWrap").innerHTML = emptyState("⚠️", esc(err.message));
+  }
+}
+async function saveSettings() {
+  const settingsForm = document.querySelector(".settings-form");
+  const body = {
+    logo_url: settingsForm.querySelector('input[data-f="logo_url"]').value.trim(),
+    khqr_logo_url: settingsForm.querySelector('input[data-f="khqr_logo_url"]').value.trim(),
+    aba_logo_url: settingsForm.querySelector('input[data-f="aba_logo_url"]').value.trim(),
+    site_name: document.getElementById("s_site_name").value.trim(),
+    footer_name: document.getElementById("s_footer_name").value.trim(),
+    admin_telegram_link: document.getElementById("s_tg_link").value.trim(),
+    admin_telegram_name: document.getElementById("s_tg_name").value.trim(),
+    facebook_link: document.getElementById("s_fb_link").value.trim(),
+    tiktok_link: document.getElementById("s_tt_link").value.trim(),
+    footer_desc: document.getElementById("s_footer_desc").value.trim(),
+    copyright: document.getElementById("s_copyright").value.trim(),
+  };
+  try {
+    await api("admin-settings", { method: "PUT", body: JSON.stringify(body) });
+    toast("បានរក្សាទុក — reload គេហទំព័រដើមម្តងទៀតដើម្បីមើលការផ្លាស់ប្តូរ");
+  } catch (err) {
+    toast(err.message, "err");
+  }
+}
+
+async function testNotify() {
+  const btn = document.getElementById("testNotifyBtn");
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = "⏳ កំពុងផ្ញើ...";
+  try {
+    const data = await api("admin-test-notify", { method: "POST" });
+    toast(data.message || "សារបានផ្ញើដោយជោគជ័យ");
+  } catch (err) {
+    toast(err.message, "err");
+  }
+  btn.disabled = false;
+  btn.textContent = original;
+}
+
+// Auto-login if a token is already saved
+(async function init() {
+  if (getToken()) {
+    try {
+      await api("admin-games");
+      document.getElementById("gate").style.display = "none";
+      document.getElementById("app").style.display = "block";
+      switchTab("games");
+    } catch { clearToken(); }
+  }
+  document.getElementById("pwInput").addEventListener("keydown", e => { if (e.key === "Enter") login(); });
+})();
+</script>
+</body>
+</html>
