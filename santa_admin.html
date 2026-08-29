@@ -455,6 +455,47 @@ async function loadKhmerTopUpCatalogue(force = false) {
   khmertopupCatalogueCache = games || [];
   return khmertopupCatalogueCache;
 }
+// ---------- BULK PACKAGE IMPORT ("add all packages at once") ----------
+// Auto-pricing rule applied server-side: only packages costing $3–$8 get
+// imported, each priced at cost + a random 5%–15% margin. Packages already
+// imported (matched by game_code + package_id) are skipped, so this is safe
+// to re-run after Khmer TopUp adds new packages to a game.
+async function bulkImportGamePackages(localGame, ktGame) {
+  if (!localGame || !localGame.code) {
+    toast("ត្រូវបន្ថែមហ្គេមនេះនៅ Games tab ព្រមទាំងកំណត់ Khmer TopUp Slug សិន", "err");
+    return;
+  }
+  if (!ktGame || !ktGame.packages?.length) {
+    toast("គ្មាន package ទេសម្រាប់ហ្គេមនេះ", "err");
+    return;
+  }
+  const inRange = ktGame.packages.filter(p => Number(p.price) >= 3 && Number(p.price) <= 8).length;
+  const ok = confirm(
+    `បន្ថែម package ទាំងអស់ (${ktGame.packages.length}) សម្រាប់ "${ktGame.name}" ចូល Products?\n` +
+    `តម្លៃលក់នឹងគណនាស្វ័យប្រវត្តិ (ចំណេញ 5%-15%) សម្រាប់តែ package ដែលមានតម្លៃដើម $3-$8 (${inRange} package)។\n` +
+    `Package ក្រៅជួរតម្លៃនេះ ឬដែលមានស្រាប់ហើយ នឹងត្រូវរំលង។`
+  );
+  if (!ok) return;
+  try {
+    const items = ktGame.packages.map(p => ({
+      name: p.name,
+      cost_usd: p.price,
+      provider_package: p.package_id,
+      image_url: localGame.image_url || "",
+    }));
+    const res = await api("admin-products-bulk-import", {
+      method: "POST",
+      body: JSON.stringify({ game_code: localGame.code, items }),
+    });
+    const skippedBits = [];
+    if (res.skipped_out_of_range) skippedBits.push(`${res.skipped_out_of_range} ក្រៅជួរតម្លៃ $3-$8`);
+    if (res.skipped_duplicate) skippedBits.push(`${res.skipped_duplicate} មានស្រាប់ហើយ`);
+    toast(`បានបន្ថែម ${res.added_count} product${skippedBits.length ? ` (រំលង ${skippedBits.join(", ")})` : ""}`);
+    if (typeof loadProducts === "function" && document.getElementById("productsTableWrap")) loadProducts();
+  } catch (err) {
+    toast(err.message, "err");
+  }
+}
 function copyToClipboard(text, label) {
   navigator.clipboard?.writeText(String(text)).then(
     () => toast(`បានចម្លង ${label}: ${text}`),
@@ -632,6 +673,7 @@ async function renderProducts() {
       <select id="filterGame" onchange="loadProducts()"><option value="">-- ហ្គេមទាំងអស់ --</option></select>
       <input id="markupPct" type="number" placeholder="Markup %" style="width:110px" value="20">
       <button class="btn ghost" style="width:auto;padding:10px 18px" onclick="applyMarkupToAll()">💰 Apply markup to empty prices</button>
+      <button class="btn ghost" style="width:auto;padding:10px 18px" onclick="bulkImportForSelectedGame()">⚡ បន្ថែមកញ្ចប់ទាំងអស់ (Bulk)</button>
       <button class="btn" style="width:auto;padding:10px 20px" onclick="addProductRow()">+ បន្ថែម Product ថ្មី</button>
     </div>
     <div class="card-panel" id="productsTableWrap">${skeletonRows()}</div>`;
@@ -644,6 +686,23 @@ async function renderProducts() {
   await loadProducts();
 }
 let productsGamesCache = [];
+// Uses the game currently picked in the "filterGame" dropdown, pulls its full
+// package list from the Khmer TopUp catalogue, and bulk-imports all of them.
+async function bulkImportForSelectedGame() {
+  const gameCode = document.getElementById("filterGame")?.value || "";
+  if (!gameCode) { toast("ជ្រើសហ្គេមមួយពី dropdown ខាងលើសិន", "err"); return; }
+  const localGame = productsGamesCache.find(g => g.code === gameCode);
+  if (!localGame || !localGame.khmertopup_slug) {
+    toast("ហ្គេមនេះមិនទាន់មាន Khmer TopUp Slug ទេ — ចូរកំណត់វានៅ Games tab សិន", "err");
+    return;
+  }
+  let games = [];
+  try { games = await loadKhmerTopUpCatalogue(); }
+  catch (err) { toast(err.message, "err"); return; }
+  const ktGame = games.find(g => g.slug === localGame.khmertopup_slug);
+  if (!ktGame) { toast("Slug នេះមិនមានក្នុង catalogue ទេ", "err"); return; }
+  await bulkImportGamePackages(localGame, ktGame);
+}
 function marginBadge(cost, price) {
   const c = parseFloat(cost), p = parseFloat(price);
   if (!isFinite(c) || !isFinite(p) || c <= 0) return `<span style="color:var(--text-dim);font-size:12px">—</span>`;
@@ -852,6 +911,7 @@ async function renderKhmerTopUp() {
   await loadKhmerTopUpTab();
 }
 let ktGamesForTab = [];
+let localGamesBySlug = {};
 async function loadKhmerTopUpTab(force = false) {
   document.getElementById("ktStats").innerHTML = `<div class="skeleton" style="padding:0"><div class="bar" style="width:160px"></div></div>`;
   try {
@@ -862,11 +922,20 @@ async function loadKhmerTopUpTab(force = false) {
     document.getElementById("ktStats").innerHTML = `<div class="stat-chip"><div class="n" style="color:var(--red);font-size:14px">⚠️ ${esc(err.message)}</div><div class="l">Wallet balance</div></div>`;
   }
   try {
+    const { games: ourGames } = await api("admin-games");
+    localGamesBySlug = {};
+    (ourGames || []).forEach(g => { if (g.khmertopup_slug) localGamesBySlug[g.khmertopup_slug] = g; });
+  } catch { localGamesBySlug = {}; }
+  try {
     ktGamesForTab = await loadKhmerTopUpCatalogue(force);
     renderKtTable();
   } catch (err) {
     document.getElementById("ktTableWrap").innerHTML = emptyState("⚠️", esc(err.message));
   }
+}
+async function bulkImportFromKtTab(slug) {
+  const ktGame = ktGamesForTab.find(g => g.slug === slug);
+  await bulkImportGamePackages(localGamesBySlug[slug], ktGame);
 }
 async function refreshKhmerTopUp() {
   khmertopupCatalogueCache = null;
@@ -885,6 +954,9 @@ function renderKtTable() {
         <div style="display:flex;gap:8px;align-items:center">
           <span class="mono" style="font-size:12px;color:var(--text-dim)">${g.packages?.length || 0} packages</span>
           <button class="btn small ghost" onclick="event.preventDefault();copyToClipboard('${esc(g.slug)}','slug')">Copy slug</button>
+          ${localGamesBySlug[g.slug]
+            ? `<button class="btn small" onclick="event.preventDefault();bulkImportFromKtTab('${esc(g.slug)}')">⚡ បន្ថែមទាំងអស់</button>`
+            : `<span class="mono" style="font-size:11px;color:var(--text-dim)" title="បន្ថែមហ្គេមនេះនៅ Games tab សិន">មិនទាន់មានហ្គេម</span>`}
         </div>
       </summary>
       <table style="margin:0 0 6px"><tbody>${(g.packages || []).map(p => `

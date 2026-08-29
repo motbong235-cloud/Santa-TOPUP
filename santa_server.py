@@ -70,6 +70,7 @@ import hashlib
 import secrets
 import threading
 import uuid
+import random
 from datetime import datetime, timezone
 
 import requests
@@ -1621,6 +1622,91 @@ def admin_products():
         ["game_code", "name", "price", "cost_usd", "provider_package", "image_url", "section"],
         required_on_create=["game_code", "name"],
     )
+
+
+
+# Bulk-import rule for "add all packages at once": only packages whose Khmer
+# TopUp wholesale cost falls in this $3-$8 band get auto-imported, each priced
+# with a random 5%-15% profit margin on top of cost. Packages outside the band
+# are skipped (add them by hand from the Products tab if you want them) so a
+# single click never silently mis-prices a $50 package at a few cents' margin.
+BULK_IMPORT_COST_MIN = 3.0
+BULK_IMPORT_COST_MAX = 8.0
+BULK_IMPORT_MARGIN_MIN = 0.05
+BULK_IMPORT_MARGIN_MAX = 0.15
+
+
+@app.route("/api/admin-products-bulk-import", methods=["POST", "OPTIONS"])
+def admin_products_bulk_import():
+    """Add every package of one game as a product in a single call ("add all
+    packages at once"). The client sends the raw Khmer TopUp package list
+    (name/cost/package_id) for one game_code; price is never trusted from the
+    client — it's always computed here as cost * (1 + random margin in
+    [BULK_IMPORT_MARGIN_MIN, BULK_IMPORT_MARGIN_MAX]), and only for packages
+    costing between BULK_IMPORT_COST_MIN and BULK_IMPORT_COST_MAX. Packages
+    already imported (same game_code + provider_package) are skipped so this
+    is safe to click again after Khmer TopUp adds new packages.
+    """
+    if request.method == "OPTIONS":
+        return json_response({})
+    auth_err = require_admin()
+    if auth_err:
+        return auth_err
+
+    body = request.get_json(silent=True) or {}
+    game_code = body.get("game_code")
+    items = body.get("items")
+    if not game_code or not isinstance(items, list) or not items:
+        return json_response({"success": False, "error": "Missing game_code or items"}, 400)
+
+    def _mutate(d):
+        existing_packages = {
+            str(p.get("provider_package"))
+            for p in d["products"]
+            if p.get("game_code") == game_code and p.get("provider_package") not in (None, "")
+        }
+        added, skipped_duplicate, skipped_out_of_range, skipped_invalid = [], 0, 0, 0
+        for item in items:
+            pkg_id = item.get("provider_package")
+            if pkg_id in (None, ""):
+                skipped_invalid += 1
+                continue
+            if str(pkg_id) in existing_packages:
+                skipped_duplicate += 1
+                continue
+            try:
+                cost = float(item.get("cost_usd"))
+            except (TypeError, ValueError):
+                skipped_invalid += 1
+                continue
+            if not (BULK_IMPORT_COST_MIN <= cost <= BULK_IMPORT_COST_MAX):
+                skipped_out_of_range += 1
+                continue
+            margin = random.uniform(BULK_IMPORT_MARGIN_MIN, BULK_IMPORT_MARGIN_MAX)
+            price = round(cost * (1 + margin), 2)
+            row = {
+                "id": next_id(d, "products"),
+                "game_code": game_code,
+                "name": item.get("name") or "",
+                "price": price,
+                "cost_usd": cost,
+                "provider_package": pkg_id,
+                "image_url": item.get("image_url") or "",
+                "section": "normal",
+            }
+            d["products"].append(row)
+            existing_packages.add(str(pkg_id))
+            added.append(row)
+        return {
+            "added": added,
+            "added_count": len(added),
+            "skipped_duplicate": skipped_duplicate,
+            "skipped_out_of_range": skipped_out_of_range,
+            "skipped_invalid": skipped_invalid,
+        }
+
+    result = db_write(_mutate)
+    return json_response({"success": True, **result})
 
 
 @app.route("/api/admin-khmertopup-games", methods=["GET", "OPTIONS"])
