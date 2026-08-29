@@ -485,6 +485,34 @@ def _seed_from_defaults(data):
     return changed
 
 
+# Every top-level table this app reads/writes, with the empty value it should
+# start as. Both the "no db.json yet" fallback and any existing db.json that
+# predates a newer table (e.g. site_settings, added after the file was first
+# created) are backfilled against this — otherwise a plain dict lookup like
+# db_read()["site_settings"] raises KeyError and the route 500s, which is
+# exactly what happened here: the old fallback schema had a stale "orders"
+# key that nothing reads (the real table is "transactions") and never had
+# "site_settings" at all.
+SCHEMA_DEFAULTS = {
+    "games": [],
+    "products": [],
+    "banners": [],
+    "transactions": [],
+    "site_settings": {},
+    "next_ids": {},
+}
+
+
+def _ensure_schema(data):
+    """Backfill any missing top-level keys in place. Returns True if it changed anything."""
+    changed = False
+    for key, default in SCHEMA_DEFAULTS.items():
+        if key not in data:
+            data[key] = [] if isinstance(default, list) else dict(default)
+            changed = True
+    return changed
+
+
 def _load_db():
     if not os.path.exists(DB_PATH):
         if os.path.exists(DEFAULT_DB_PATH):
@@ -495,12 +523,16 @@ def _load_db():
             # empty-but-valid schema instead of crashing (this is the exact
             # FileNotFoundError PVH TOPUP hit on its first deploy).
             print("WARNING: db_default.json not found — starting with an empty database.")
-            data = {"games": [], "products": [], "banners": [], "orders": [], "next_ids": {}}
+            data = {}
+        _ensure_schema(data)
         _save_db(data)
         return data
     with open(DB_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
-    if _seed_from_defaults(data):
+    changed = _seed_from_defaults(data)
+    if _ensure_schema(data):
+        changed = True
+    if changed:
         _save_db(data)
     return data
 
