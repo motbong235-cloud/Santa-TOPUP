@@ -448,14 +448,29 @@ function toast(msg, isErr){
 }
 async function api(path, opts){
   opts = opts || {};
-  const res = await fetch("/api/" + path, {
-    method: opts.method || "GET",
-    headers: Object.assign({"Content-Type":"application/json"}, opts.headers||{}),
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
-  });
-  let data;
-  try { data = await res.json(); } catch(e){ data = {}; }
-  return data;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s — avoid hanging forever on a slow/dead upstream (e.g. ABA PayWay)
+  try {
+    const res = await fetch("/api/" + path, {
+      method: opts.method || "GET",
+      headers: Object.assign({"Content-Type":"application/json"}, opts.headers||{}),
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+      signal: controller.signal,
+    });
+    let data;
+    try { data = await res.json(); } catch(e){ data = {}; }
+    if (!res.ok && data.success === undefined) {
+      data = { success: false, error: data.error || `Server error (${res.status})` };
+    }
+    return data;
+  } catch (e) {
+    // Network failure, timeout, or CORS/connection drop — surface it as a
+    // normal {success:false} instead of letting the caller hang forever.
+    const msg = e.name === "AbortError" ? "ការតភ្ជាប់យឺតពេក សូមសាកល្បងម្តងទៀត" : "មិនអាចភ្ជាប់ទៅ server បានទេ — សូមពិនិត្យអ៊ីនធឺណិត";
+    return { success: false, error: msg };
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 function decryptPayload(payloadB64){
   const bytes = CryptoJS.AES.decrypt(payloadB64, PAYLOAD_KEY);
@@ -665,17 +680,24 @@ async function buyNow(){
   const btn = $("#buyBtn");
   if(btn){ btn.disabled = true; btn.textContent = "កំពុងបង្កើត QR..."; }
 
-  const r = await api("create-payment", {
-    method:"POST",
-    body:{userId, zoneId: state.zoneId || "", gameCode: state.activeGame.code, productId: state.selectedProduct.id},
-  });
+  try {
+    const r = await api("create-payment", {
+      method:"POST",
+      body:{userId, zoneId: state.zoneId || "", gameCode: state.activeGame.code, productId: state.selectedProduct.id},
+    });
 
-  if(!r.success){
-    toast(r.error || "បង្កើត QR មិនជោគជ័យ", true);
+    if(!r.success){
+      toast(r.error || "បង្កើត QR មិនជោគជ័យ", true);
+      return;
+    }
+    openPaymentSheet(r.trx_id, r.qr_image, r.pay_url, amount);
+  } catch (e) {
+    // Belt-and-suspenders: api() itself shouldn't throw anymore, but if
+    // anything else in this block does, never leave the button stuck.
+    toast("មានបញ្ហាកើតឡើង សូមសាកល្បងម្តងទៀត", true);
+  } finally {
     if(btn){ btn.disabled = false; btn.textContent = "ទិញឥឡូវ"; }
-    return;
   }
-  openPaymentSheet(r.trx_id, r.qr_image, r.pay_url, amount);
 }
 
 function openPaymentSheet(trxId, qrImage, payUrl, amount){
