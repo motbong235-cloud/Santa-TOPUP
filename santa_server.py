@@ -853,16 +853,27 @@ def admin_upload():
     return json_response({"success": True, "url": url})
 
 
+def _no_cache_html(directory, filename):
+    """send_from_directory() defaults to letting browsers cache HTML for
+    hours — fine for a static asset, wrong for a page whose embedded game/
+    product data should always be current. Force revalidation every time."""
+    resp = send_from_directory(directory, filename)
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
+
+
 @app.route("/")
 def serve_index():
-    return send_from_directory(STATIC_DIR, "santa_topup.html")
+    return _no_cache_html(STATIC_DIR, "santa_topup.html")
 
 
 @app.route("/terms")
 @app.route("/terms/")
 def serve_terms():
     try:
-        return send_from_directory(STATIC_DIR, "terms.html")
+        return _no_cache_html(STATIC_DIR, "terms.html")
     except FileNotFoundError:
         return json_response({"success": False, "error": "terms.html not found — upload it alongside server_v16.py"}, 404)
 
@@ -871,7 +882,7 @@ def serve_terms():
 @app.route("/privacy/")
 def serve_privacy():
     try:
-        return send_from_directory(STATIC_DIR, "privacy.html")
+        return _no_cache_html(STATIC_DIR, "privacy.html")
     except FileNotFoundError:
         return json_response({"success": False, "error": "privacy.html not found — upload it alongside server_v16.py"}, 404)
 
@@ -883,7 +894,7 @@ def serve_admin():
     if not _device_cookie_valid(request.cookies.get(_DEVICE_COOKIE_NAME)):
         return _ADMIN_GATE_HTML
     try:
-        return send_from_directory(STATIC_DIR, "santa_admin.html")
+        return _no_cache_html(STATIC_DIR, "santa_admin.html")
     except FileNotFoundError:
         # santa_admin.html wasn't part of this deploy bundle — every /api/admin-*
         # route above still works fine with curl/Postman/x-admin-token in the
